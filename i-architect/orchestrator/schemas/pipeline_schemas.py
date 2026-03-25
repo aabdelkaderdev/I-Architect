@@ -4,6 +4,7 @@ Pipeline Schemas — Pydantic DTOs for task management and progress.
 Referenced by: FR-TASK-005/006/012/013, IR-TASK-002/003.
 """
 
+from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -21,6 +22,7 @@ class PipelineRunRequest(BaseModel):
     arlo_config: Optional[dict] = Field(default=None, description="ARLO-specific configuration.")
     extraction_strategy: Optional[str] = Field(default=None, description="Selected extraction strategy name.")
     target_framework: str = Field(default="C4_Container", description="'C4_Container' or 'UML_Component'.")
+    uploaded_filename: str = Field(default="", description="Original filename of the uploaded requirements document (FR-PDF-005/005b).")
 
 
 class PipelineProgress(BaseModel):
@@ -52,3 +54,12 @@ class TaskResult(BaseModel):
     status: str = Field(..., description="Final status: COMPLETED, FAILED, CANCELLED.")
     artifact_paths: list[str] = Field(default_factory=list, description="Paths to generated output files.")
     error_log: Optional[str] = Field(default=None, description="Error details if FAILED.")
+
+    # ── Execution metadata for PDF reports (FR-PDF-005/005b) ──
+    workflow_type: Optional[int] = Field(default=None, description="Workflow number used: 1, 2, or 3.")
+    llm_mappings: dict[str, list[str]] = Field(
+        default_factory=dict,
+        description="Agent → LLM config names mapping used during execution.",
+    )
+    uploaded_filename: str = Field(default="", description="Original uploaded requirements filename.")
+    completed_at: Optional[datetime] = Field(default=None, description="Pipeline completion timestamp.")

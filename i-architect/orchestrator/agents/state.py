@@ -20,6 +20,8 @@ class PipelineState(TypedDict, total=False):
     workflow_type: int  # 1, 2, or 3
     target_framework: str  # "C4_Container" or "UML_Component"
     cancel_requested: bool
+    uploaded_filename: str  # Original uploaded requirements filename (FR-PDF-005/005b)
+    llm_mappings: dict[str, list[str]]  # Agent → LLM config names (FR-PDF-005b)
 
     # ── Ingestion / Extraction ──
     uploaded_files: list[str]

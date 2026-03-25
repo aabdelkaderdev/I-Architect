@@ -40,10 +40,15 @@
 #### FR-PDF-005: Template A — Document Header
 - **Description:** Template A SHALL include a header section with:
   - Title: "ARLO Architectural Decision Report"
-  - Metadata: Generation Date, Tool Implementation ("ARLO v2.3"), Project Name.
+  - Metadata:
+    - Project Name
+    - Tool Implementation ("ARLO v2.3")
+    - **Source Requirements File:** The original uploaded filename (e.g., `requirements_v3.pdf`)
+    - **LLM Used for ARLO:** Provider and model name of the LLM assigned to the ARLO agent (e.g., `Ollama / llama3.1:8b`)
+    - **Generation Timestamp:** PDF creation date and time in `YYYY-MM-DD HH:MM:SS` format
 - **SRS Trace:** §12
 - **Priority:** Must
-- **Acceptance Criteria:** The header renders with correct metadata values.
+- **Acceptance Criteria:** The header renders with correct metadata values including the uploaded filename, ARLO LLM identity, and generation timestamp.
 
 #### FR-PDF-006: Template A — Requirements Summary Table
 - **Description:** Template A SHALL render a summary table with 3 metrics:
@@ -77,6 +82,16 @@
 - **SRS Trace:** §12
 - **Priority:** Must
 - **Acceptance Criteria:** A 100-row ASR table renders across multiple pages without any rows being cut off.
+
+#### FR-PDF-005b: Template B — Execution Metadata Section
+- **Description:** Template B Part 2 SHALL include an "Execution Metadata" section rendered above the RAA content. This section SHALL display:
+  1. **Workflow Type:** The workflow number used (1, 2, or 3) with a human-readable label (e.g., "Workflow 2 — Parallel Multi-LLM").
+  2. **Source Requirements File:** The original uploaded filename.
+  3. **LLM ↔ Agent Mapping Table:** A table with columns [Agent Name, LLM Provider, Model Name] listing the LLM assigned to each agent in the pipeline (Filtering, ARLO, RAA, AGA, SA).
+  4. **Generation Timestamp:** PDF creation date and time in `YYYY-MM-DD HH:MM:SS` format.
+- **SRS Trace:** §12
+- **Priority:** Must
+- **Acceptance Criteria:** A Workflow 2 run with 3 different LLMs renders a 5-row agent mapping table and correctly displays the workflow type, source filename, and timestamp.
 
 ### 1.3 Template B: Full Pipeline Report
 

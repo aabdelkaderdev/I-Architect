@@ -33,6 +33,44 @@
 </head>
 
 <body>
+    <!-- Section: Execution Metadata (FR-PDF-005b) -->
+    <h1>Execution Metadata</h1>
+    <table>
+        <tr>
+            <th>Field</th>
+            <th>Value</th>
+        </tr>
+        <tr>
+            <td>Workflow Type</td>
+            <td>{{ workflow_type_label }}</td>
+        </tr>
+        <tr>
+            <td>Source Requirements File</td>
+            <td>{{ uploaded_filename }}</td>
+        </tr>
+        <tr>
+            <td>Generated</td>
+            <td>{{ generation_timestamp }}</td>
+        </tr>
+    </table>
+
+    <h2>LLM ↔ Agent Mapping</h2>
+    <table>
+        <tr>
+            <th>Agent</th>
+            <th>LLM Provider</th>
+            <th>Model Name</th>
+        </tr>
+        <!-- Stub: Iterate over llm_agent_mappings -->
+        {% for mapping in llm_agent_mappings %}
+        <tr>
+            <td>{{ mapping.agent_name }}</td>
+            <td>{{ mapping.provider }}</td>
+            <td>{{ mapping.model_name }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
     <!-- Section 5: RAA Analysis (FR-PDF-011) -->
     <h1>5. Requirements Analysis</h1>
     <h2>5.1 TOON IR — Entities</h2>
