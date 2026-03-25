@@ -1,0 +1,8 @@
+# ─────────────────────────────────────────────
+# I-Architect ChromaDB Seeder — Dependencies
+# ─────────────────────────────────────────────
+
+chromadb==1.5.5
+pypdf
+sentence-transformers
+langchain-text-splitters

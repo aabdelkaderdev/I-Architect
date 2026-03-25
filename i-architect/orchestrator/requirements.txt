@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────
+# I-Architect Orchestrator — Dependencies
+# ─────────────────────────────────────────────
+
+# === Pinned (per requirements) ===
+django==6.0.3
+celery==5.6.2
+redis==7.2.1
+langchain==1.2.13
+langchain-classic==1.0.3
+langchain-core==1.2.21
+langgraph==1.1.2
+chromadb==1.5.5
+
+# === Django Ecosystem ===
+djangorestframework
+django-cors-headers
+psycopg2-binary
+gunicorn
+
+# === LLM & AI ===
+tiktoken
+sentence-transformers
+
+# === PDF & Document Processing ===
+weasyprint
+pypdf
+pymupdf
+python-docx
+openpyxl
+pandas
+Jinja2
+
+# === Optimization ===
+ortools
+
+# === Pydantic ===
+pydantic
+
+# === Utilities ===
+python-Levenshtein
+requests

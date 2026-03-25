@@ -1,0 +1,8 @@
+# ─────────────────────────────────────────────
+# I-Architect UI — Dependencies
+# ─────────────────────────────────────────────
+
+streamlit==1.55.0
+requests
+streamlit-code-editor
+streamlit-pdf-viewer

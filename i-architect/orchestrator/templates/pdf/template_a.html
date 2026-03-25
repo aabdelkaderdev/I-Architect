@@ -1,0 +1,39 @@
+<!-- ARLO Architectural Decision Report — Jinja2 Template -->
+<!-- FR-PDF-004: Template A generates automatically at end of ARLO step -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>I-Architect — ARLO Report ({{ arlo_reference }})</title>
+    <style>
+        /* Stub: CSS styles for Template A */
+        body { font-family: 'Segoe UI', sans-serif; margin: 2cm; }
+        h1 { color: #1a237e; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #e8eaf6; }
+    </style>
+</head>
+<body>
+    <h1>Architectural Decision Report</h1>
+    <p><strong>System:</strong> {{ system_name }}</p>
+    <p><strong>Reference:</strong> {{ arlo_reference }}</p>
+    <p><strong>Strategy:</strong> {{ optimization_strategy }}</p>
+
+    <!-- Section 1: Decision Matrix (FR-PDF-005) -->
+    <h2>1. Architectural Decisions</h2>
+    <!-- Stub: Iterate over alpha_decisions -->
+
+    <!-- Section 2: ASR Registry (FR-PDF-006) -->
+    <h2>2. Architecturally Significant Requirements</h2>
+    <!-- Stub: Iterate over gamma_asr_registry -->
+
+    <!-- Section 3: Influential Sets (FR-PDF-007) -->
+    <h2>3. Sensitivity Analysis — Influential Sets</h2>
+    <!-- Stub: Iterate over beta_influential_sets -->
+
+    <!-- Section 4: Trade-off Summary (FR-PDF-008) -->
+    <h2>4. Trade-off Summary</h2>
+    <!-- Stub: Cross-reference trade_offs per decision -->
+</body>
+</html>

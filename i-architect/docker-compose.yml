@@ -1,0 +1,205 @@
+version: "3.9"
+
+services:
+  # ─────────────────────────────────────────────
+  # Streamlit Frontend
+  # ─────────────────────────────────────────────
+  streamlit-ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: i-architect-ui
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://orchestrator:8000
+    networks:
+      - i-architect-net
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    mem_limit: 512M
+    restart: on-failure
+
+  # ─────────────────────────────────────────────
+  # Django Orchestrator (API Gateway)
+  # ─────────────────────────────────────────────
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: i-architect-orchestrator
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=orchestrator.settings
+      - DATABASE_URL=postgres://iarchitect:iarchitect@postgres:5432/iarchitect
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CHROMADB_URL=http://i-architect-chromadb:8000
+      - PLANTUML_URL=http://plantuml-server:8080
+      - MEDIA_ROOT=/app/media
+    volumes:
+      - media_data:/app/media
+    networks:
+      - i-architect-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: on-failure
+
+  # ─────────────────────────────────────────────
+  # Celery Worker
+  # ─────────────────────────────────────────────
+  celery-worker:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: i-architect-celery-worker
+    command: celery -A orchestrator.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - DJANGO_SETTINGS_MODULE=orchestrator.settings
+      - DATABASE_URL=postgres://iarchitect:iarchitect@postgres:5432/iarchitect
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CHROMADB_URL=http://i-architect-chromadb:8000
+      - PLANTUML_URL=http://plantuml-server:8080
+      - MEDIA_ROOT=/app/media
+    volumes:
+      - media_data:/app/media
+    networks:
+      - i-architect-net
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    restart: on-failure
+
+  # ─────────────────────────────────────────────
+  # Celery Beat (Periodic Tasks)
+  # ─────────────────────────────────────────────
+  celery-beat:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: i-architect-celery-beat
+    command: celery -A orchestrator.celery_app beat --loglevel=info
+    environment:
+      - DJANGO_SETTINGS_MODULE=orchestrator.settings
+      - DATABASE_URL=postgres://iarchitect:iarchitect@postgres:5432/iarchitect
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - MEDIA_ROOT=/app/media
+    volumes:
+      - media_data:/app/media
+    networks:
+      - i-architect-net
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    restart: on-failure
+
+  # ─────────────────────────────────────────────
+  # Redis (Broker + Cache + Locks)
+  # ─────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: i-architect-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - i-architect-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: on-failure
+
+  # ─────────────────────────────────────────────
+  # PostgreSQL Database
+  # ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: i-architect-postgres
+    environment:
+      - POSTGRES_DB=iarchitect
+      - POSTGRES_USER=iarchitect
+      - POSTGRES_PASSWORD=iarchitect
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - i-architect-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iarchitect"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: on-failure
+
+  # ─────────────────────────────────────────────
+  # ChromaDB Vector Database
+  # ─────────────────────────────────────────────
+  i-architect-chromadb:
+    build:
+      context: ./chromadb
+      dockerfile: Dockerfile
+    container_name: i-architect-chromadb
+    ports:
+      - "8200:8000"
+    networks:
+      - i-architect-net
+    mem_limit: 1G
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: on-failure
+
+  # ─────────────────────────────────────────────
+  # PlantUML Rendering Server
+  # ─────────────────────────────────────────────
+  plantuml-server:
+    image: plantuml/plantuml-server:jetty-v1.2026.2
+    container_name: i-architect-plantuml
+    ports:
+      - "8300:8080"
+    environment:
+      - JAVA_OPTS=-Xmx400m -Xms128m -Djava.awt.headless=true
+    networks:
+      - i-architect-net
+    mem_limit: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+    restart: on-failure
+
+# ─────────────────────────────────────────────
+# Networks
+# ─────────────────────────────────────────────
+networks:
+  i-architect-net:
+    driver: bridge
+
+# ─────────────────────────────────────────────
+# Volumes
+# ─────────────────────────────────────────────
+volumes:
+  postgres_data:
+  media_data:

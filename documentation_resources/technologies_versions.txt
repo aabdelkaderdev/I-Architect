@@ -5,3 +5,5 @@ redis-py = 7.2.1
 langchain = 1.2.13
 langchain-classic = 1.0.3
 langchain-core = 1.2.21
+lannggraph = 1.1.2
+chromadb = 1.5.5
