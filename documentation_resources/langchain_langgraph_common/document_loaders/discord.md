@@ -1,0 +1,53 @@
+<!-- Source: https://docs.langchain.com/oss/python/integrations/document_loaders/discord -->
+
+> [Discord](https://discord.com/) is a VoIP and instant messaging social platform. Users have the ability to communicate with voice calls, video calls, text messaging, media and files in private chats or as part of communities called “servers”. A server is a collection of persistent chat rooms and voice channels which can be accessed via invite links.
+
+Follow these steps to download your `Discord` data:
+
+1. Go to your **User Settings**
+2. Then go to **Privacy and Safety**
+3. Head over to the **Request all of my Data** and click on **Request Data** button
+
+It might take 30 days for you to receive your data. You’ll receive an email at the address which is registered with Discord. That email will have a download button using which you would be able to download your personal Discord data.
+
+Copy
+
+```
+import os
+
+import pandas as pd
+```
+
+Copy
+
+```
+path = input('Please enter the path to the contents of the Discord "messages" folder: ')
+li = []
+for f in os.listdir(path):
+    expected_csv_path = os.path.join(path, f, "messages.csv")
+    csv_exists = os.path.isfile(expected_csv_path)
+    if csv_exists:
+        df = pd.read_csv(expected_csv_path, index_col=None, header=0)
+        li.append(df)
+
+df = pd.concat(li, axis=0, ignore_index=True, sort=False)
+```
+
+Copy
+
+```
+from langchain_community.document_loaders.discord import DiscordChatLoader
+```
+
+Copy
+
+```
+loader = DiscordChatLoader(df, user_id_col="ID")
+print(loader.load())
+```
+
+---
+
+[Edit this page on GitHub](https://github.com/langchain-ai/docs/edit/main/src/oss/python/integrations/document_loaders/discord.mdx) or [file an issue](https://github.com/langchain-ai/docs/issues/new/choose).
+
+[Connect these docs](/use-these-docs) to Claude, VSCode, and more via MCP for real-time answers.

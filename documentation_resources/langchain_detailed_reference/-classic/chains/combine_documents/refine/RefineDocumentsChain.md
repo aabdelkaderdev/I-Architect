@@ -1,0 +1,356 @@
+<!-- Source: https://reference.langchain.com/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain -->
+
+Classv1.2.13 (latest)●Since v1.0Deprecated
+
+# RefineDocumentsChain
+
+
+```
+RefineDocumentsChain()
+```
+
+## Bases
+
+`BaseCombineDocumentsChain`
+
+## Attributes
+
+## Methods
+
+## Inherited from[BaseCombineDocumentsChain](/python/langchain-classic/chains/combine_documents/base/BaseCombineDocumentsChain)
+
+### Attributes
+
+[Ainput\_key: str](/python/langchain-classic/chains/combine_documents/base/BaseCombineDocumentsChain/input_key)[Aoutput\_key: str](/python/langchain-classic/chains/combine_documents/base/BaseCombineDocumentsChain/output_key)[Ainput\_keys: list[str]
+
+—
+
+Expect input key.](/python/langchain-classic/chains/combine_documents/base/BaseCombineDocumentsChain/input_keys)
+
+### Methods
+
+
+
+M
+
+get\_input\_schema
+
+[Mget\_output\_schema](/python/langchain-classic/chains/combine_documents/base/BaseCombineDocumentsChain/get_output_schema)
+
+[Mprompt\_length
+
+—
+
+Return the prompt length given the documents passed in.](/python/langchain-classic/chains/combine_documents/base/BaseCombineDocumentsChain/prompt_length)
+
+## Inherited from[Chain](/python/langchain-classic/chains/base/Chain)
+
+### Attributes
+
+[Amemory: BaseMemory | None
+
+—
+
+Optional memory object.](/python/langchain-classic/chains/base/Chain/memory)[Acallbacks: Callbacks
+
+—
+
+Optional list of callback handlers (or callback manager).](/python/langchain-classic/chains/base/Chain/callbacks)[Averbose: bool
+
+—
+
+Whether or not run in verbose mode. In verbose mode, some intermediate logs](/python/langchain-classic/chains/base/Chain/verbose)[Atags: list[str] | None
+
+—
+
+Optional list of tags associated with the chain.](/python/langchain-classic/chains/base/Chain/tags)[Ametadata: builtins.dict[str, Any] | None
+
+—
+
+Optional metadata associated with the chain.](/python/langchain-classic/chains/base/Chain/metadata)[Acallback\_manager: BaseCallbackManager | None
+
+—
+
+[DEPRECATED] Use `callbacks` instead.](/python/langchain-classic/chains/base/Chain/callback_manager)[Ainput\_keys: list[str]
+
+—
+
+Keys expected to be in the chain input.](/python/langchain-classic/chains/base/Chain/input_keys)
+
+### Methods
+
+[Mget\_input\_schema](/python/langchain-classic/chains/base/Chain/get_input_schema)[Mget\_output\_schema](/python/langchain-classic/chains/base/Chain/get_output_schema)[Minvoke](/python/langchain-classic/chains/base/Chain/invoke)[Mainvoke](/python/langchain-classic/chains/base/Chain/ainvoke)[Mraise\_callback\_manager\_deprecation
+
+—
+
+Raise deprecation warning if callback\_manager is used.](/python/langchain-classic/chains/base/Chain/raise_callback_manager_deprecation)[M](/python/langchain-classic/chains/base/Chain/set_verbose)
+
+## Inherited from[RunnableSerializable](/python/langchain-core/runnables/base/RunnableSerializable)(langchain\_core)
+
+### Attributes
+
+[Aname](/python/langchain-core/runnables/base/RunnableSerializable/name)
+
+### Methods
+
+[Mto\_json](/python/langchain-core/runnables/base/RunnableSerializable/to_json)[Mconfigurable\_fields](/python/langchain-core/runnables/base/RunnableSerializable/configurable_fields)[Mconfigurable\_alternatives](/python/langchain-core/runnables/base/RunnableSerializable/configurable_alternatives)
+
+## Inherited from[Serializable](/python/langchain-core/load/serializable/Serializable)(langchain\_core)
+
+### Attributes
+
+[Alc\_secrets](/python/langchain-core/load/serializable/Serializable/lc_secrets)[Alc\_attributes](/python/langchain-core/load/serializable/Serializable/lc_attributes)
+
+### Methods
+
+[Mis\_lc\_serializable](/python/langchain-core/load/serializable/Serializable/is_lc_serializable)[Mget\_lc\_namespace](/python/langchain-core/load/serializable/Serializable/get_lc_namespace)[Mlc\_id](/python/langchain-core/load/serializable/Serializable/lc_id)[Mto\_json](/python/langchain-core/load/serializable/Serializable/to_json)[Mto\_json\_not\_implemented](/python/langchain-core/load/serializable/Serializable/to_json_not_implemented)
+
+## Inherited from[Runnable](/python/langchain-core/runnables/base/Runnable)(langchain\_core)
+
+### Attributes
+
+[Aname](/python/langchain-core/runnables/base/Runnable/name)[AInputType](/python/langchain-core/runnables/base/Runnable/InputType)[AOutputType](/python/langchain-core/runnables/base/Runnable/OutputType)[Ainput\_schema](/python/langchain-core/runnables/base/Runnable/input_schema)[Aoutput\_schema](/python/langchain-core/runnables/base/Runnable/output_schema)[Aconfig\_specs](/python/langchain-core/runnables/base/Runnable/config_specs)
+
+### Methods
+
+[Mget\_name](/python/langchain-core/runnables/base/Runnable/get_name)[Mget\_input\_schema](/python/langchain-core/runnables/base/Runnable/get_input_schema)[Mget\_input\_jsonschema](/python/langchain-core/runnables/base/Runnable/get_input_jsonschema)[Mget\_output\_schema](/python/langchain-core/runnables/base/Runnable/get_output_schema)[Mget\_output\_jsonschema](/python/langchain-core/runnables/base/Runnable/get_output_jsonschema)[Mconfig\_schema](/python/langchain-core/runnables/base/Runnable/config_schema)
+
+[attribute
+
+initial\_llm\_chain: LLMChain
+
+LLM chain to use on initial document.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/initial_llm_chain)
+
+[attribute
+
+refine\_llm\_chain: LLMChain
+
+LLM chain to use when refining.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/refine_llm_chain)
+
+[attribute
+
+document\_variable\_name: str
+
+The variable name in the initial\_llm\_chain to put the documents in.
+If only one variable in the initial\_llm\_chain, this need not be provided.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/document_variable_name)
+
+[attribute
+
+initial\_response\_name: str
+
+The variable name to format the initial response in when refining.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/initial_response_name)
+
+[attribute
+
+document\_prompt: BasePromptTemplate
+
+Prompt to use to format each document, gets passed to `format_document`.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/document_prompt)
+
+[attribute
+
+return\_intermediate\_steps: bool
+
+Return the results of the refine steps in the output.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/return_intermediate_steps)
+
+[attribute
+
+output\_keys: list[str]
+
+Expect input key.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/output_keys)
+
+[attribute
+
+model\_config](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/model_config)
+
+[method
+
+get\_return\_intermediate\_steps
+
+For backwards compatibility.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/get_return_intermediate_steps)
+
+[method
+
+get\_default\_document\_variable\_name
+
+Get default document variable name, if not provided.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/get_default_document_variable_name)
+
+[method
+
+combine\_docs
+
+Combine by mapping first chain over all, then stuffing into final chain.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/combine_docs)
+
+[method
+
+acombine\_docs
+
+Combine by mapping a first chain over all, then stuffing into a final chain.](/python/langchain-classic/chains/combine_documents/refine/RefineDocumentsChain/acombine_docs)
+
+Combine documents by doing a first pass and then refining on more documents.
+
+This algorithm first calls `initial_llm_chain` on the first document, passing
+that first document in with the variable name `document_variable_name`, and
+produces a new variable with the variable name `initial_response_name`.
+
+Then, it loops over every remaining document. This is called the "refine" step.
+It calls `refine_llm_chain`,
+passing in that document with the variable name `document_variable_name`
+as well as the previous response with the variable name `initial_response_name`.
+
+**Example:**
+
+```
+from langchain_classic.chains import RefineDocumentsChain, LLMChain
+from langchain_core.prompts import PromptTemplate
+from langchain_openai import OpenAI
+
+# This controls how each document will be formatted. Specifically,
+# it will be passed to `format_document` - see that function for more
+# details.
+document_prompt = PromptTemplate(
+    input_variables=["page_content"], template="{page_content}"
+)
+document_variable_name = "context"
+model = OpenAI()
+# The prompt here should take as an input variable the
+# `document_variable_name`
+prompt = PromptTemplate.from_template("Summarize this content: {context}")
+initial_llm_chain = LLMChain(llm=model, prompt=prompt)
+initial_response_name = "prev_response"
+# The prompt here should take as an input variable the
+# `document_variable_name` as well as `initial_response_name`
+prompt_refine = PromptTemplate.from_template(
+    "Here's your first summary: {prev_response}. "
+    "Now add to it based on the following context: {context}"
+)
+refine_llm_chain = LLMChain(llm=model, prompt=prompt_refine)
+chain = RefineDocumentsChain(
+    initial_llm_chain=initial_llm_chain,
+    refine_llm_chain=refine_llm_chain,
+    document_prompt=document_prompt,
+    document_variable_name=document_variable_name,
+    initial_response_name=initial_response_name,
+)
+```
+
+set\_verbose
+
+—
+
+Set the chain verbosity.
+
+[Macall
+
+—
+
+Asynchronously execute the chain.](/python/langchain-classic/chains/base/Chain/acall)
+
+[Mprep\_outputs
+
+—
+
+Validate and prepare chain outputs, and save info about this run to memory.](/python/langchain-classic/chains/base/Chain/prep_outputs)
+
+[Maprep\_outputs
+
+—
+
+Validate and prepare chain outputs, and save info about this run to memory.](/python/langchain-classic/chains/base/Chain/aprep_outputs)
+
+[Mprep\_inputs
+
+—
+
+Prepare chain inputs, including adding inputs from memory.](/python/langchain-classic/chains/base/Chain/prep_inputs)
+
+[Maprep\_inputs
+
+—
+
+Prepare chain inputs, including adding inputs from memory.](/python/langchain-classic/chains/base/Chain/aprep_inputs)
+
+[Mrun
+
+—
+
+Convenience method for executing chain.](/python/langchain-classic/chains/base/Chain/run)
+
+[Marun
+
+—
+
+Convenience method for executing chain.](/python/langchain-classic/chains/base/Chain/arun)
+
+[Mdict
+
+—
+
+Dictionary representation of chain.](/python/langchain-classic/chains/base/Chain/dict)
+
+[Msave
+
+—
+
+Save the chain.](/python/langchain-classic/chains/base/Chain/save)
+
+[Mapply
+
+—
+
+Call the chain on all inputs in the list.](/python/langchain-classic/chains/base/Chain/apply)
+
+M
+
+get\_config\_jsonschema
+
+[Mget\_graph](/python/langchain-core/runnables/base/Runnable/get_graph)
+
+[Mget\_prompts](/python/langchain-core/runnables/base/Runnable/get_prompts)
+
+[Mpipe](/python/langchain-core/runnables/base/Runnable/pipe)
+
+[Mpick](/python/langchain-core/runnables/base/Runnable/pick)
+
+[Massign](/python/langchain-core/runnables/base/Runnable/assign)
+
+[Minvoke](/python/langchain-core/runnables/base/Runnable/invoke)
+
+[Mainvoke](/python/langchain-core/runnables/base/Runnable/ainvoke)
+
+[Mbatch](/python/langchain-core/runnables/base/Runnable/batch)
+
+[Mbatch\_as\_completed](/python/langchain-core/runnables/base/Runnable/batch_as_completed)
+
+[Mabatch](/python/langchain-core/runnables/base/Runnable/abatch)
+
+[Mabatch\_as\_completed](/python/langchain-core/runnables/base/Runnable/abatch_as_completed)
+
+[Mstream](/python/langchain-core/runnables/base/Runnable/stream)
+
+[Mastream](/python/langchain-core/runnables/base/Runnable/astream)
+
+[Mastream\_log](/python/langchain-core/runnables/base/Runnable/astream_log)
+
+[Mastream\_events](/python/langchain-core/runnables/base/Runnable/astream_events)
+
+[Mtransform](/python/langchain-core/runnables/base/Runnable/transform)
+
+[Matransform](/python/langchain-core/runnables/base/Runnable/atransform)
+
+[Mbind](/python/langchain-core/runnables/base/Runnable/bind)
+
+[Mwith\_config](/python/langchain-core/runnables/base/Runnable/with_config)
+
+[Mwith\_listeners](/python/langchain-core/runnables/base/Runnable/with_listeners)
+
+[Mwith\_alisteners](/python/langchain-core/runnables/base/Runnable/with_alisteners)
+
+[Mwith\_types](/python/langchain-core/runnables/base/Runnable/with_types)
+
+[Mwith\_retry](/python/langchain-core/runnables/base/Runnable/with_retry)
+
+[Mmap](/python/langchain-core/runnables/base/Runnable/map)
+
+[Mwith\_fallbacks](/python/langchain-core/runnables/base/Runnable/with_fallbacks)
+
+[Mas\_tool](/python/langchain-core/runnables/base/Runnable/as_tool)

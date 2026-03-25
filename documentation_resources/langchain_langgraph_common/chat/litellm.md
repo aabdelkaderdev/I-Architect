@@ -1,0 +1,159 @@
+<!-- Source: https://docs.langchain.com/oss/python/integrations/chat/litellm -->
+
+[LiteLLM](https://github.com/BerriAI/litellm) is a library that simplifies calling Anthropic, Azure, Huggingface, Replicate, etc.
+This notebook covers how to get started with using LangChain + the LiteLLM I/O library.
+This integration contains two main classes:
+
+- `ChatLiteLLM`: The main LangChain wrapper for basic usage of LiteLLM ([docs](https://docs.litellm.ai/docs/)).
+- `ChatLiteLLMRouter`: A `ChatLiteLLM` wrapper that leverages LiteLLM’s Router ([docs](https://docs.litellm.ai/docs/routing)).
+
+## [​](#overview) Overview
+
+### [​](#integration-details) Integration details
+
+| Class | Package | Serializable | JS support | Downloads | Version |
+| --- | --- | --- | --- | --- | --- |
+| [`ChatLiteLLM`](https://reference.langchain.com/python/langchain-litellm/chat_models/litellm/ChatLiteLLM) | [`langchain-litellm`](https://pypi.org/project/langchain-litellm/) | ❌ | ❌ |  |  |
+| [`ChatLiteLLMRouter`](https://reference.langchain.com/python/langchain-litellm/chat_models/litellm_router/ChatLiteLLMRouter) | [`langchain-litellm`](https://pypi.org/project/langchain-litellm/) | ❌ | ❌ |  |  |
+
+### [​](#model-features) Model features
+
+| [Tool calling](/oss/python/langchain/tools) | [Structured output](/oss/python/langchain/structured-output) | Image input | Audio input | Video input | [Token-level streaming](/oss/python/integrations/chat/litellm#async-and-streaming-functionality) | [Native async](/oss/python/integrations/chat/litellm#async-and-streaming-functionality) | [Token usage](/oss/python/langchain/models#token-usage) | [Logprobs](/oss/python/langchain/models#log-probabilities) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ❌ |
+
+### [​](#setup) Setup
+
+To access `ChatLiteLLM` and `ChatLiteLLMRouter` models, you’ll need to install the `langchain-litellm` package and create an OpenAI, Anthropic, Azure, Replicate, OpenRouter, Hugging Face, Together AI, or Cohere account. Then, you have to get an API key and export it as an environment variable.
+
+## [​](#credentials) Credentials
+
+You have to choose the LLM provider you want and sign up with them to get their API key.
+
+### [​](#example-anthropic) Example - Anthropic
+
+Head to the [Claude console](https://console.anthropic.com) to sign up and generate a Claude API key. Once you’ve done this set the `ANTHROPIC_API_KEY` environment variable:
+
+### [​](#example-openai) Example - OpenAI
+
+Head to [platform.openai.com/api-keys](https://platform.openai.com/api-keys) to sign up for OpenAI and generate an API key. Once you’ve done this, set the OPENAI\_API\_KEY environment variable.
+
+Copy
+
+```
+## Set ENV variables
+import os
+
+os.environ["OPENAI_API_KEY"] = "your-openai-key"
+os.environ["ANTHROPIC_API_KEY"] = "your-anthropic-key"
+```
+
+### [​](#installation) Installation
+
+The LangChain LiteLLM integration is available in the `langchain-litellm` package:
+
+Copy
+
+```
+pip install -qU langchain-litellm
+```
+
+## [​](#instantiation) Instantiation
+
+### [​](#chatlitellm) ChatLiteLLM
+
+You can instantiate a `ChatLiteLLM` model by providing a `model` name [supported by LiteLLM](https://docs.litellm.ai/docs/providers).
+
+Copy
+
+```
+from langchain_litellm import ChatLiteLLM
+
+llm = ChatLiteLLM(model="gpt-4.1-nano", temperature=0.1)
+```
+
+### [​](#chatlitellmrouter) ChatLiteLLMRouter
+
+You can also leverage LiteLLM’s routing capabilities by defining your model list as specified in the [LiteLLM routing documentation](https://docs.litellm.ai/docs/routing).
+
+Copy
+
+```
+from langchain_litellm import ChatLiteLLMRouter
+from litellm import Router
+
+model_list = [
+    {
+        "model_name": "gpt-4.1",
+        "litellm_params": {
+            "model": "azure/gpt-4.1",
+            "api_key": "<your-api-key>",
+            "api_version": "2024-10-21",
+            "api_base": "https://<your-endpoint>.openai.azure.com/",
+        },
+    },
+    {
+        "model_name": "gpt-4.1",
+        "litellm_params": {
+            "model": "azure/gpt-4.1",
+            "api_key": "<your-api-key>",
+            "api_version": "2024-10-21",
+            "api_base": "https://<your-endpoint>.openai.azure.com/",
+        },
+    },
+]
+litellm_router = Router(model_list=model_list)
+llm = ChatLiteLLMRouter(router=litellm_router, model_name="gpt-4.1", temperature=0.1)
+```
+
+## [​](#invocation) Invocation
+
+Whether you’ve instantiated a `ChatLiteLLM` or a `ChatLiteLLMRouter`, you can now use the ChatModel through LangChain’s API.
+
+Copy
+
+```
+response = await llm.ainvoke(
+    "Classify the text into neutral, negative or positive. Text: I think the food was okay. Sentiment:"
+)
+print(response)
+```
+
+Copy
+
+```
+content='Neutral' additional_kwargs={} response_metadata={'token_usage': Usage(completion_tokens=2, prompt_tokens=30, total_tokens=32, completion_tokens_details=CompletionTokensDetailsWrapper(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=0, rejected_prediction_tokens=0, text_tokens=None), prompt_tokens_details=PromptTokensDetailsWrapper(audio_tokens=0, cached_tokens=0, text_tokens=None, image_tokens=None)), 'model': 'gpt-3.5-turbo', 'finish_reason': 'stop', 'model_name': 'gpt-3.5-turbo'} id='run-ab6a3b21-eae8-4c27-acb2-add65a38221a-0' usage_metadata={'input_tokens': 30, 'output_tokens': 2, 'total_tokens': 32}
+```
+
+## [​](#async-and-streaming-functionality) Async and streaming functionality
+
+`ChatLiteLLM` and `ChatLiteLLMRouter` also support async and streaming functionality:
+
+Copy
+
+```
+async for token in llm.astream("Hello, please explain how antibiotics work"):
+    print(token.text(), end="")
+```
+
+Copy
+
+```
+Antibiotics are medications that fight bacterial infections in the body. They work by targeting specific bacteria and either killing them or preventing their growth and reproduction.
+
+There are several different mechanisms by which antibiotics work. Some antibiotics work by disrupting the cell walls of bacteria, causing them to burst and die. Others interfere with the protein synthesis of bacteria, preventing them from growing and reproducing. Some antibiotics target the DNA or RNA of bacteria, disrupting their ability to replicate.
+
+It is important to note that antibiotics only work against bacterial infections and not viral infections. It is also crucial to take antibiotics as prescribed by a healthcare professional and to complete the full course of treatment, even if symptoms improve before the medication is finished. This helps to prevent antibiotic resistance, where bacteria become resistant to the effects of antibiotics.
+```
+
+---
+
+## [​](#api-reference) API reference
+
+For detailed documentation of all `ChatLiteLLM` and `ChatLiteLLMRouter` features and configurations, head to the [API reference](https://reference.langchain.com/python/langchain-litellm).
+
+---
+
+[Edit this page on GitHub](https://github.com/langchain-ai/docs/edit/main/src/oss/python/integrations/chat/litellm.mdx) or [file an issue](https://github.com/langchain-ai/docs/issues/new/choose).
+
+[Connect these docs](/use-these-docs) to Claude, VSCode, and more via MCP for real-time answers.

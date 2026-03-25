@@ -1,0 +1,383 @@
+<!-- Source: https://pymupdf.readthedocs.io/en/latest/story-class.html -->
+
+pymupdf.io
+
+[English](javaScript:changeLanguage('en'))
+[日本語](javaScript:changeLanguage('ja'))
+[한국어](javaScript:changeLanguage('ko'))
+
+[Find **#pymupdf** on **Discord**](https://discord.gg/TSpYGBW4eq)
+
+[Try our forum!](https://forum.mupdf.com)
+
+# Story
+
+- New in v1.21.0
+
+| **Method / Attribute** | **Short Description** |
+| --- | --- |
+| [`Story.reset()`](#Story.reset "Story.reset") | “rewind” story output to its beginning |
+| [`Story.place()`](#Story.place "Story.place") | compute story content to fit in provided rectangle |
+| [`Story.draw()`](#Story.draw "Story.draw") | write the computed content to current page |
+| [`Story.element_positions()`](#Story.element_positions "Story.element_positions") | callback function logging currently processed story content |
+| [`Story.body`](#Story.body "Story.body") | the story’s underlying *body* |
+| [`Story.write()`](#Story.write "Story.write") | places and draws Story to a DocumentWriter |
+| [`Story.write_stabilized()`](#Story.write_stabilized "Story.write_stabilized") | iterative layout of html content to a DocumentWriter |
+| [`Story.write_with_links()`](#Story.write_with_links "Story.write_with_links") | like [`write()`](#Story.write "Story.write") but also creates PDF links |
+| [`Story.write_stabilized_with_links()`](#Story.write_stabilized_with_links "Story.write_stabilized_with_links") | like [`write_stabilized()`](#Story.write_stabilized "Story.write_stabilized") but also creates PDF links |
+| [`Story.fit()`](#Story.fit "Story.fit") | Finds optimal rect that contains the story `self`. |
+| [`Story.fit_scale()`](#Story.fit_scale "Story.fit_scale") |  |
+| [`Story.fit_height()`](#Story.fit_height "Story.fit_height") |  |
+| [`Story.fit_width()`](#Story.fit_width "Story.fit_width") |  |
+
+**Class API**
+
+*class* Story
+:   \_\_init\_\_(*self*, *html=None*, *user\_css=None*, *em=12*, *archive=None*)
+    :   Create a **story**, optionally providing HTML and CSS source.
+        The HTML is parsed, and held within the Story as a DOM (Document Object Model).
+
+        This structure may be modified: content (text, images) may be added,
+        copied, modified or removed by using methods of the [Xml](xml-class.html#xml) class.
+
+        When finished, the **story** can be written to any device;
+        in typical usage the device may be provided by a [DocumentWriter](document-writer-class.html#documentwriter) to make new pages.
+
+        Here are some general remarks:
+
+        - The [Story](#story) constructor parses and validates the provided HTML to create the DOM.
+        - PyMuPDF provides a number of ways to manipulate the HTML source by
+          providing access to the *nodes* of the underlying DOM.
+          Documents can be completely built from ground up programmatically,
+          or the existing DOM can be modified pretty arbitrarily.
+          For details of this interface, please see the [Xml](xml-class.html#xml) class.
+        - If no (or no more) changes to the DOM are required,
+          the story is ready to be laid out and to be fed to a series of devices
+          (typically devices provided by a [DocumentWriter](document-writer-class.html#documentwriter) to produce new pages).
+        - The next step is to place the story and write it out.
+          This can either be done directly, by looping around calling [`place()`](#Story.place "Story.place") and [`draw()`](#Story.draw "Story.draw"),
+          or alternatively,
+          the looping can handled for you using the [`write()`](#Story.write "Story.write") or `write_stabilised()` methods.
+          Which method you choose is largely a matter of taste.
+
+          - To work in the first of these styles, the following loop should be used:
+
+            1. Obtain a suitable device to write to;
+               typically by requesting a new,
+               empty page from a [DocumentWriter](document-writer-class.html#documentwriter).
+            2. Determine one or more rectangles on the page,
+               that should receive **story** data.
+               Note that not every page needs to have the same set of rectangles.
+            3. Pass each rectangle to the **story** to place it,
+               learning what part of that rectangle has been filled,
+               and whether there is more story data that did not fit.
+               This step can be repeated several times with adjusted rectangles
+               until the caller is happy with the results.
+            4. Optionally, at this point,
+               we can request details of where interesting items have been placed,
+               by calling the [`element_positions()`](#Story.element_positions "Story.element_positions") method.
+               Items are deemed to be interesting if their integer `heading` attribute is a non-zero
+               (corresponding to HTML tags *h1* - *h6*),
+               if their `id` attribute is not `None` (corresponding to HTML tag *id*),
+               or if their `href` attribute is not `None` (responding to HTML tag *href*).
+               This can conveniently be used for automatic generation of a Table of Contents,
+               an index of images or the like.
+            5. Next, draw that rectangle out to the device with the [`draw()`](#Story.draw "Story.draw") method.
+            6. If the most recent call to [`place()`](#Story.place "Story.place") indicated that all the story data had fitted,
+               stop now.
+            7. Otherwise, we can loop back.
+               If there are more rectangles to be placed on the current device (page),
+               we jump back to step 3 - if not, we jump back to step 1 to get a new device.
+          - Alternatively, in the case where you are using a [DocumentWriter](document-writer-class.html#documentwriter),
+            the [`write()`](#Story.write "Story.write") or [`write_stabilized()`](#Story.write_stabilized "Story.write_stabilized") methods can be used.
+            These handle all the looping for you,
+            in exchange for being provided with callbacks that control the behaviour
+            (notably a callback that enumerates the rectangles/pages to use).
+        - Which part of the **story** will land on which rectangle / which page,
+          is fully under control of the [Story](#story) object and cannot be predicted.
+        - Images may be part of a **story**. They will be placed together with any surrounding text.
+        - Multiple stories may - independently from each other - write to the same page.
+          For example, one may have separate stories for page header,
+          page footer, regular text, comment boxes, etc.
+
+        Parameters:
+        :   - **html** (*str*) – HTML source code. If omitted, a basic minimum is generated (see below).
+              If provided, not a complete HTML document is needed.
+              The in-built source parser will forgive (many / most)
+              HTML syntax errors and also accepts HTML fragments like
+              `"<b>Hello, <i>World!</i></b>"`.
+            - **user\_css** (*str*) – CSS source code. If provided, must contain valid CSS specifications.
+            - **em** (*float*) – the default text font size.
+            - **archive** –
+
+              an [Archive](archive-class.html#archive) from which to load resources for rendering. Currently supported resource types are images and text fonts. If omitted, the story will not try to look up any such data and may thus produce incomplete output.
+
+              Note
+
+              Instead of an actual archive, valid arguments for **creating** an [Archive](archive-class.html#archive) can also be provided – in which case an archive will temporarily be constructed. So, instead of `story = pymupdf.Story(archive=pymupdf.Archive("myfolder"))`, one can also shorter write `story = pymupdf.Story(archive="myfolder")`.
+
+    place(*where*)
+    :   Calculate that part of the story’s content, that will fit in the provided rectangle. The method maintains a pointer which part of the story’s content has already been written and upon the next invocation resumes from that pointer’s position.
+
+        Parameters:
+        :   **where** (*rect\_like*) – layout the current part of the content to fit into this rectangle. This must be a sub-rectangle of the page’s [MediaBox](glossary.html#glossary-mediabox).
+
+        Return type:
+        :   tuple[bool, rect\_like]
+
+        Returns:
+        :   a bool (int) `more` and a rectangle `filled`. If `more == 0`, all content of the story has been written, otherwise more is waiting to be written to subsequent rectangles / pages. Rectangle `filled` is the part of `where` that has actually been filled.
+
+    draw(*dev*, *matrix=None*)
+    :   Write the content part prepared by [`Story.place()`](#Story.place "Story.place") to the page.
+
+        Parameters:
+        :   - **dev** – the [Device](device.html#device) created by `dev = writer.begin_page(mediabox)`. The device knows how to call all MuPDF functions needed to write the content.
+            - **matrix** (*matrix\_like*) – a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the [Identity](identity.html#identity) matrix).
+
+    element\_positions(*function*, *args=None*)
+    :   Let the Story provide positioning information about certain HTML elements once their place on the current page has been computed - i.e. invoke this method **directly after** [`Story.place()`](#Story.place "Story.place").
+
+        *Story* will pass position information to *function*. This information can for example be used to generate a Table of Contents.
+
+        Parameters:
+        :   - **function** (*callable*) – a Python function accepting an `ElementPosition` object. It will be invoked by the Story object to process positioning information. The function **must** be a callable accepting exactly one argument.
+            - **args** (*dict*) – an optional dictionary with any **additional** information
+              that should be added to the `ElementPosition` instance passed to `function`.
+              Like for example the current output page number.
+              Every key in this dictionary must be a string that conforms to the rules for a valid Python identifier.
+              The complete set of information is explained below.
+
+    reset()
+    :   Rewind the story’s document to the beginning for starting over its output.
+
+    body
+    :   The *body* part of the story’s DOM. This attribute contains the [Xml](xml-class.html#xml) node of *body*. All relevant content for PDF production is contained between “<body>” and “</body>”.
+
+    write(*writer*, *rectfn*, *positionfn=None*, *pagefn=None*)
+    :   Places and draws Story to a [DocumentWriter](document-writer-class.html#documentwriter). Avoids the need for
+        calling code to implement a loop that calls [`Story.place()`](#Story.place "Story.place") and
+        [`Story.draw()`](#Story.draw "Story.draw") etc, at the expense of having to provide at least the
+        `rectfn()` callback.
+
+        Parameters:
+        :   - **writer** – a [DocumentWriter](document-writer-class.html#documentwriter) or None.
+            - **rectfn** –
+
+              a callable taking `(rect_num: int, filled: Rect)` and
+              returning `(mediabox, rect, ctm)`:
+
+              - mediabox: None or rect for new page.
+              - rect: The next rect into which content should be placed.
+              - ctm: None or a [Matrix](matrix.html#matrix).
+            - **positionfn** –
+
+              None, or a callable taking `(position: ElementPosition)`:
+
+              - position:
+                :   An `ElementPosition` with an extra `.page_num` member.
+
+              Typically called multiple times as we generate elements that
+              are headings or have an id.
+            - **pagefn** – None, or a callable taking `(page_num, mediabox, dev, after)`;
+              called at start (`after=0`) and end (`after=1`) of each page.
+
+    *static* write\_stabilized(*writer*, *contentfn*, *rectfn*, *user\_css=None*, *em=12*, *positionfn=None*, *pagefn=None*, *archive=None*, *add\_header\_ids=True*)
+    :   Static method that does iterative layout of html content to a
+        [DocumentWriter](document-writer-class.html#documentwriter).
+
+        For example this allows one to add a table of contents section
+        while ensuring that page numbers are patched up until stable.
+
+        Repeatedly creates a new [Story](#story) from `(contentfn(),
+        user_css, em, archive)` and lays it out with internal call
+        to [`Story.write()`](#Story.write "Story.write"); uses a None writer and extracts the list
+        of `ElementPosition`’s which is passed to the next call of
+        `contentfn()`.
+
+        When the html from `contentfn()` becomes unchanged, we do a
+        final iteration using `writer`.
+
+        Parameters:
+        :   - **writer** – A [DocumentWriter](document-writer-class.html#documentwriter).
+            - **contentfn** – A function taking a list of `ElementPositions` and
+              returning a string containing html. The returned html
+              can depend on the list of positions, for example with a
+              table of contents near the start.
+            - **rectfn** –
+
+              A callable taking `(rect_num: int, filled: Rect)` and
+              returning `(mediabox, rect, ctm)`:
+
+              - mediabox: None or rect for new page.
+              - rect: The next rect into which content should be placed.
+              - ctm: A [Matrix](matrix.html#matrix).
+            - **pagefn** – None, or a callable taking `(page_num, medibox,
+              dev, after)`; called at start (`after=0`) and end
+              (`after=1`) of each page.
+            - **archive**
+            - **add\_header\_ids** – If true, we add unique ids to all header tags that
+              don’t already have an id. This can help automatic
+              generation of tables of contents.
+
+        Returns:
+        :   None.
+
+    write\_with\_links(*rectfn*, *positionfn=None*, *pagefn=None*)
+    :   Similar to [`write()`](#Story.write "Story.write") except that we don’t have a `writer` arg
+        and we return a PDF [Document](document.html#document) in which links have been created
+        for each internal html link.
+
+    *static* write\_stabilized\_with\_links(*contentfn*, *rectfn*, *user\_css=None*, *em=12*, *positionfn=None*, *pagefn=None*, *archive=None*, *add\_header\_ids=True*)
+    :   Similar to [`write_stabilized()`](#Story.write_stabilized "Story.write_stabilized") except that we don’t have a `writer`
+        arg and instead return a PDF [Document](document.html#document) in which links have been
+        created for each internal html link.
+
+    *class* FitResult
+    :   The result from a `Story.fit*()` method.
+
+        Members:
+
+        `big_enough`:
+        :   `True` if the fit succeeded.
+
+        `filled`:
+        :   From the last call to [`Story.place()`](#Story.place "Story.place").
+
+        `more`:
+        :   `False` if the fit succeeded.
+
+        `numcalls`:
+        :   Number of calls made to `self.place()`.
+
+        `parameter`:
+        :   The successful parameter value, or the largest failing value.
+
+        [Rect](rect.html):
+        :   The rect created from `parameter`.
+
+    fit(*self*, *fn*, *pmin=None*, *pmax=None*, *delta=0.001*, *verbose=False*)
+    :   Finds optimal rect that contains the story `self`.
+
+        Returns a [`Story.FitResult`](#Story.FitResult "Story.FitResult") instance.
+
+        On success, the last call to `self.place()` will have been with the
+        returned rectangle, so `self.draw()` can be used directly.
+
+        Parameters:
+        :   - **fn** –
+
+              A callable taking a floating point `parameter` and returning a
+              `pymupdf.Rect()`. If the rect is empty, we assume the story will
+              not fit and do not call `self.place()`.
+
+              Must guarantee that `self.place()` behaves monotonically when
+              given rect `fn(parameter`) as `parameter` increases. This
+              usually means that both width and height increase or stay
+              unchanged as `parameter` increases.
+            - **pmin** – Minimum parameter to consider; `None` for -infinity.
+            - **pmax** – Maximum parameter to consider; `None` for +infinity.
+            - **delta** – Maximum error in returned `parameter`.
+            - **verbose** – If true we output diagnostics.
+
+    fit\_scale(*self*, *rect*, *scale\_min=0*, *scale\_max=None*, *delta=0.001*, *verbose=False*)
+    :   Finds smallest value `scale` in range `scale_min..scale_max` where
+        `scale * rect` is large enough to contain the story `self`.
+
+        Returns a [`Story.FitResult`](#Story.FitResult "Story.FitResult") instance.
+
+        Parameters:
+        :   - **width** – width of rect.
+            - **height** – height of rect.
+            - **scale\_min** – Minimum scale to consider; must be >= 0.
+            - **scale\_max** – Maximum scale to consider, must be >= scale\_min or `None` for
+              infinite.
+            - **delta** – Maximum error in returned scale.
+            - **verbose** – If true we output diagnostics.
+
+    fit\_height(*self*, *width*, *height\_min=0*, *height\_max=None*, *origin=(0, 0)*, *delta=0.001*, *verbose=False*)
+    :   Finds smallest height in range `height_min..height_max` where a rect
+        with size `(width, height)` is large enough to contain the story
+        `self`.
+
+        Returns a [`Story.FitResult`](#Story.FitResult "Story.FitResult") instance.
+
+        Parameters:
+        :   - **width** – width of rect.
+            - **height\_min** – Minimum height to consider; must be >= 0.
+            - **height\_max** – Maximum height to consider, must be >= height\_min or `None` for
+              infinite.
+            - **origin** – `(x0, y0)` of rect.
+            - **delta** – Maximum error in returned height.
+            - **verbose** – If true we output diagnostics.
+
+    fit\_width(*self*, *height*, *width\_min=0*, *width\_max=None*, *origin=(0, 0)*, *delta=0.001*, *verbose=False*)
+    :   Finds smallest width in range `width_min..width_max` where a rect with size
+        `(width, height)` is large enough to contain the story `self`.
+
+        Returns a [`Story.FitResult`](#Story.FitResult "Story.FitResult") instance.
+
+        Parameters:
+        :   - **height** – height of rect.
+            - **width\_min** – Minimum width to consider; must be >= 0.
+            - **width\_max** – Maximum width to consider, must be >= width\_min or `None` for
+              infinite.
+            - **origin** – `(x0, y0)` of rect.
+            - **delta** – Maximum error in returned width.
+            - **verbose** – If true we output diagnostics.
+
+## Element Positioning CallBack function
+
+The callback function can be used to log information about story output. The function’s access to the information is read-only: it has no way to influence the story’s output.
+
+A typical loop for executing a story with using this method would look like this:
+
+```
+HTML = """
+<html>
+    <head></head>
+    <body>
+        <h1>Header level 1</h1>
+        <h2>Header level 2</h2>
+        <p>Hello MuPDF!</p>
+    </body>
+</html>
+"""
+MEDIABOX = pymupdf.paper_rect("letter")  # size of a page
+WHERE = MEDIABOX + (36, 36, -36, -36)  # leave borders of 0.5 inches
+story =  pymupdf.Story(html=HTML)  # make the story
+writer = pymupdf.DocumentWriter("test.pdf")  # make the writer
+pno = 0 # current page number
+more = 1  # will be set to 0 when done
+while more:  # loop until all story content is processed
+    dev = writer.begin_page(MEDIABOX)  # make a device to write on the page
+    more, filled = story.place(WHERE)  # compute content positions on page
+    story.element_positions(recorder, {"page": pno})  # provide page number in addition
+    story.draw(dev)
+    writer.end_page()
+    pno += 1  # increase page number
+writer.close()  # close output file
+
+def recorder(elpos):
+    pass
+```
+
+### Attributes of the ElementPosition class
+
+Exactly one parameter must be passed to the function provided by [`Story.element_positions()`](#Story.element_positions "Story.element_positions"). It is an object with the following attributes:
+
+The parameter passed to the `recorder` function is an object with the following attributes:
+
+- `elpos.depth` (int) – depth of this element in the box structure.
+- `elpos.heading` (int) – the header level, 0 if no header, 1-6 for *h1* - *h6*.
+- `elpos.href` (str) – value of the `href` attribute, or None if not defined.
+- `elpos.id` (str) – value of the `id` attribute, or None if not defined.
+- `elpos.rect` (tuple) – element position on page.
+- `elpos.text` (str) – immediate text of the element.
+- `elpos.open_close` (int bit field) – bit 0 set: opens element, bit 1 set: closes element. Relevant for elements that may contain other elements and thus may not immediately be closed after being created / opened.
+- `elpos.rect_num` (int) – count of rectangles filled by the story so far.
+- `elpos.page_num` (int) – page number; only present when using `pymupdf.Story.write*()` functions.
+
+---
+
+This software is provided AS-IS with no warranty, either express or implied. This software is distributed under license and may not be copied, modified or distributed except as expressly authorized under the terms of that license. Refer to licensing information at [artifex.com](https://www.artifex.com?utm_source=rtd-pymupdf&utm_medium=rtd&utm_content=footer-link) or contact Artifex Software Inc., 39 Mesa Street, Suite 108A, San Francisco CA 94129, United States for further information.

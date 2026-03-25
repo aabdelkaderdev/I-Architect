@@ -1,0 +1,502 @@
+<!-- Source: https://docs.langchain.com/oss/python/integrations/tools/parallel_search -->
+
+> [Parallel](https://platform.parallel.ai/) is a real-time web search and content extraction platform designed specifically for LLMs and AI applications.
+
+The `ParallelWebSearchTool` provides access to Parallel’s Search API, which streamlines the traditional search → scrape → extract pipeline into a single API call, returning structured, LLM-optimized results.
+
+## [​](#overview) Overview
+
+### [​](#integration-details) Integration details
+
+| Class | Package | Serializable | JS support | Package latest |
+| --- | --- | --- | --- | --- |
+| [`ParallelWebSearchTool`](https://reference.langchain.com/python/langchain-parallel/search_tool/ParallelWebSearchTool) | [`langchain-parallel`](https://reference.langchain.com/python/langchain-parallel/) | ❌ | ❌ |  |
+
+### [​](#tool-features) Tool features
+
+- **Real-time web search**: Access current information from the web
+- **Structured results**: Returns compressed, LLM-optimized excerpts
+- **Flexible input**: Support for natural language objectives or specific search queries
+- **Domain filtering**: Include or exclude specific domains with source policy
+- **Customizable output**: Control number of results (1-40) and excerpt length (min 100 chars)
+- **Rich metadata**: Optional search timing, result counts, and query information
+- **Async support**: Full async/await support with proper executor handling
+- **Error handling**: Comprehensive error handling with detailed error messages
+
+## [​](#setup) Setup
+
+The integration lives in the `langchain-parallel` package.
+
+Copy
+
+```
+pip install -qU langchain-parallel
+```
+
+### [​](#credentials) Credentials
+
+Head to [Parallel](https://beta.parallel.ai) to sign up and generate an API key. Once you’ve done this set the `PARALLEL_API_KEY` environment variable:
+
+Copy
+
+```
+import getpass
+import os
+
+if not os.environ.get("PARALLEL_API_KEY"):
+    os.environ["PARALLEL_API_KEY"] = getpass.getpass("Parallel API key:\n")
+```
+
+## [​](#instantiation) Instantiation
+
+Here we show how to instantiate an instance of the `ParallelWebSearchTool`. The tool can be configured with API key and base URL parameters:
+
+Copy
+
+```
+from langchain_parallel import ParallelWebSearchTool
+
+# Basic instantiation - API key from environment
+tool = ParallelWebSearchTool()
+
+# With explicit API key and custom base URL
+tool = ParallelWebSearchTool(
+    api_key="your-api-key",
+    base_url="https://api.parallel.ai",  # default value
+)
+```
+
+## [​](#invocation) Invocation
+
+### [​](#invoke-directly-with-args) Invoke directly with args
+
+You can invoke the tool with either an `objective` (natural language description) or specific `search_queries`. The tool supports various configuration options including domain filtering and metadata collection:
+
+Copy
+
+```
+# Using specific search queries with advanced options
+result = tool.invoke(
+    {
+        "search_queries": [
+            "AI breakthroughs 2024",
+            "machine learning advances",
+            "generative AI news",
+        ],
+        "max_results": 8,
+        "excerpts": {"max_chars_per_result": 2000},
+        "mode": "one-shot",  # Use 'agentic' for token-efficient results
+        "source_policy": {
+            "include_domains": ["arxiv.org", "nature.com"],
+            "exclude_domains": ["reddit.com", "twitter.com"],
+        },
+        "fetch_policy": {
+            "max_age_seconds": 86400,  # Cache content for 1 day
+            "timeout_seconds": 60,
+        },
+        "include_metadata": True,
+        "timeout": 120,  # Custom timeout in seconds
+    }
+)
+
+print(result)
+```
+
+Copy
+
+```
+# Using an objective (natural language) with metadata
+result = tool.invoke(
+    {
+        "objective": "What are the latest developments in artificial intelligence in 2024?",
+        "max_results": 5,
+        "include_metadata": True,  # Include search timing and statistics
+    }
+)
+
+print(result)
+
+# Example response structure:
+# {
+#     "search_id": "search_abc123...",
+#     "results": [
+#         {
+#             "url": "https://example.com/ai-news",
+#             "title": "Latest AI Developments 2024",
+#             "excerpts": [
+#                 "Recent breakthrough in transformer architectures...",
+#                 "New applications in computer vision..."
+#             ]
+#         }
+#     ],
+#     "search_metadata": {
+#         "search_duration_seconds": 4.123,
+#         "search_timestamp": "2024-01-15T10:30:00",
+#         "max_results_requested": 5,
+#         "actual_results_returned": 4,
+#         "search_id": "search_abc123...",
+#         "query_count": 1,
+#         "source_policy_applied": false
+#     }
+# }
+```
+
+### [​](#invoke-with-toolcall) Invoke with `ToolCall`
+
+We can also invoke the tool with a model-generated `ToolCall`, in which case a `ToolMessage` will be returned:
+
+Copy
+
+```
+# This is usually generated by a model, but we'll create a tool call directly for demo purposes.
+model_generated_tool_call = {
+    "args": {
+        "objective": "Find recent news about climate change initiatives",
+        "max_results": 3,
+        "source_policy": {"include_domains": ["ipcc.ch", "unfccc.int", "nature.com"]},
+        "include_metadata": True,
+    },
+    "id": "call_123",
+    "name": tool.name,  # "parallel_web_search"
+    "type": "tool_call",
+}
+
+result = tool.invoke(model_generated_tool_call)
+print(result)
+print(f"Tool name: {tool.name}")  # parallel_web_search
+print(f"Tool description: {tool.description}")
+```
+
+### [​](#async-usage) Async usage
+
+The tool supports full async/await operations for better performance in async applications:
+
+Copy
+
+```
+async def search_async():
+    return await tool.ainvoke(
+        {
+            "objective": "Latest quantum computing breakthroughs",
+            "max_results": 5,
+            "include_metadata": True,
+        }
+    )
+
+# Run async search
+result = await search_async()
+print(result)
+```
+
+### [​](#parameter-details-and-validation) Parameter details and validation
+
+The tool performs comprehensive input validation and supports the following parameters:
+
+#### [​](#required-parameters) Required parameters
+
+At least one of the following must be provided:
+
+- `objective`: Natural language description (max 5000 characters)
+- `search_queries`: List of search queries (max 5 queries, 200 chars each)
+
+#### [​](#optional-parameters) Optional parameters:
+
+- `max_results`: Number of results to return (1-40, default: 10)
+- `excerpts`: Excerpt settings dict (e.g., `{"max_chars_per_result": 1500}`)
+- `mode`: Search mode - ‘one-shot’ for comprehensive results, ‘agentic’ for token-efficient results
+- `source_policy`: Domain filtering with `include_domains` and/or `exclude_domains` lists
+- `fetch_policy`: Cache control dict (e.g., `{"max_age_seconds": 86400, "timeout_seconds": 60}`)
+- `include_metadata`: Include search timing and statistics (default: True)
+- `timeout`: Request timeout in seconds (optional)
+
+#### [​](#error-handling) Error handling:
+
+The tool provides detailed error messages for validation failures and API errors.
+
+Copy
+
+```
+# Example of comprehensive parameter usage
+result = tool.invoke(
+    {
+        "objective": "Find comprehensive information about renewable energy policies in European countries",
+        "max_results": 15,
+        "excerpts": {
+            "max_chars_per_result": 2500
+        },  # Longer excerpts for detailed information
+        "mode": "one-shot",  # Comprehensive results
+        "source_policy": {
+            "include_domains": ["europa.eu", "iea.org", "irena.org"],
+            "exclude_domains": ["wikipedia.org", "reddit.com"],
+        },
+        "fetch_policy": {
+            "max_age_seconds": 86400,  # 1 day cache
+            "timeout_seconds": 90,
+        },
+        "include_metadata": True,
+        "timeout": 180,  # Extended timeout for comprehensive searches
+    }
+)
+
+# Access results and metadata
+print(f"Found {len(result['results'])} results")
+if "search_metadata" in result:
+    metadata = result["search_metadata"]
+    print(f"Search took {metadata['search_duration_seconds']}s")
+    print(f"Source policy applied: {metadata.get('source_policy_applied', False)}")
+```
+
+## [​](#chaining) Chaining
+
+We can use our tool in a chain by first binding it to a [tool-calling model](/oss/python/langchain/tools) and then calling it:
+
+- OpenAI
+- Anthropic
+- Azure
+- Google Gemini
+- AWS Bedrock
+- HuggingFace
+
+👉 Read the [OpenAI chat model integration docs](/oss/python/integrations/chat/openai)
+
+Copy
+
+```
+pip install -U "langchain[openai]"
+```
+
+init\_chat\_model
+
+Model Class
+
+Copy
+
+```
+import os
+from langchain.chat_models import init_chat_model
+
+os.environ["OPENAI_API_KEY"] = "sk-..."
+
+model = init_chat_model("gpt-5.2")
+```
+
+👉 Read the [Anthropic chat model integration docs](/oss/python/integrations/chat/anthropic)
+
+Copy
+
+```
+pip install -U "langchain[anthropic]"
+```
+
+init\_chat\_model
+
+Model Class
+
+Copy
+
+```
+import os
+from langchain.chat_models import init_chat_model
+
+os.environ["ANTHROPIC_API_KEY"] = "sk-..."
+
+model = init_chat_model("claude-sonnet-4-6")
+```
+
+👉 Read the [Azure chat model integration docs](/oss/python/integrations/chat/azure_chat_openai)
+
+Copy
+
+```
+pip install -U "langchain[openai]"
+```
+
+init\_chat\_model
+
+Model Class
+
+Copy
+
+```
+import os
+from langchain.chat_models import init_chat_model
+
+os.environ["AZURE_OPENAI_API_KEY"] = "..."
+os.environ["AZURE_OPENAI_ENDPOINT"] = "..."
+os.environ["OPENAI_API_VERSION"] = "2025-03-01-preview"
+
+model = init_chat_model(
+    "azure_openai:gpt-5.2",
+    azure_deployment=os.environ["AZURE_OPENAI_DEPLOYMENT_NAME"],
+)
+```
+
+👉 Read the [Google GenAI chat model integration docs](/oss/python/integrations/chat/google_generative_ai)
+
+Copy
+
+```
+pip install -U "langchain[google-genai]"
+```
+
+init\_chat\_model
+
+Model Class
+
+Copy
+
+```
+import os
+from langchain.chat_models import init_chat_model
+
+os.environ["GOOGLE_API_KEY"] = "..."
+
+model = init_chat_model("google_genai:gemini-2.5-flash-lite")
+```
+
+👉 Read the [AWS Bedrock chat model integration docs](/oss/python/integrations/chat/bedrock)
+
+Copy
+
+```
+pip install -U "langchain[aws]"
+```
+
+init\_chat\_model
+
+Model Class
+
+Copy
+
+```
+from langchain.chat_models import init_chat_model
+
+# Follow the steps here to configure your credentials:
+# https://docs.aws.amazon.com/bedrock/latest/userguide/getting-started.html
+
+model = init_chat_model(
+    "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    model_provider="bedrock_converse",
+)
+```
+
+👉 Read the [HuggingFace chat model integration docs](/oss/python/integrations/chat/huggingface)
+
+Copy
+
+```
+pip install -U "langchain[huggingface]"
+```
+
+init\_chat\_model
+
+Model Class
+
+Copy
+
+```
+import os
+from langchain.chat_models import init_chat_model
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "hf_..."
+
+model = init_chat_model(
+    "microsoft/Phi-3-mini-4k-instruct",
+    model_provider="huggingface",
+    temperature=0.7,
+    max_tokens=1024,
+)
+```
+
+Copy
+
+```
+# | output: false
+# | echo: false
+
+# !pip install -qU langchain langchain-openai
+from langchain.chat_models import init_chat_model
+
+llm = init_chat_model(model="gpt-4.1", model_provider="openai")
+```
+
+Copy
+
+```
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig, chain
+
+prompt = ChatPromptTemplate(
+    [
+        ("system", "You are a helpful assistant."),
+        ("human", "{user_input}"),
+        ("placeholder", "{messages}"),
+    ]
+)
+
+# Specifying tool_choice will force the model to call this tool.
+llm_with_tools = llm.bind_tools([tool], tool_choice=tool.name)
+
+llm_chain = prompt | llm_with_tools
+
+@chain
+def tool_chain(user_input: str, config: RunnableConfig):
+    input_ = {"user_input": user_input}
+    ai_msg = llm_chain.invoke(input_, config=config)
+    tool_msgs = tool.batch(ai_msg.tool_calls, config=config)
+    return llm_chain.invoke({**input_, "messages": [ai_msg, *tool_msgs]}, config=config)
+
+tool_chain.invoke("What are the latest breakthrough discoveries in quantum computing?")
+```
+
+## [​](#best-practices) Best practices
+
+- **Use specific objectives**: More specific objectives lead to better, more targeted results
+- **Apply domain filtering**: Use `source_policy` to focus on authoritative sources or exclude unreliable domains
+- **Include metadata**: Set `include_metadata: True` for debugging and performance optimization
+- **Handle errors gracefully**: The tool provides detailed error messages for validation and API failures
+- **Use async for performance**: Use `ainvoke()` in async applications for better performance
+
+## [​](#response-format) Response format
+
+The tool returns a structured dictionary with the following format:
+
+Copy
+
+```
+{
+    "search_id": "search_abc123...",  # Unique search identifier
+    "results": [  # List of search results
+        {
+            "url": "https://example.com/page",
+            "title": "Page Title",
+            "excerpts": [  # Relevant text excerpts
+                "First relevant excerpt...",
+                "Second relevant excerpt..."
+            ]
+        }
+    ],
+    "search_metadata": {  # Optional metadata (if include_metadata=True)
+        "search_duration_seconds": 4.123,
+        "search_timestamp": "2024-01-15T10:30:00",
+        "max_results_requested": 10,
+        "actual_results_returned": 8,
+        "search_id": "search_abc123...",
+        "query_count": 3,  # Number of queries used
+        "queries_used": ["query1", "query2", "query3"],  # If search_queries provided
+        "source_policy_applied": true,  # If source_policy was used
+        "included_domains": ["nature.com"],  # Domains that were included
+        "excluded_domains": ["reddit.com"]   # Domains that were excluded
+    }
+}
+```
+
+## [​](#api-reference) API reference
+
+For detailed documentation of all features and configuration options, head to the [`ParallelWebSearchTool`](https://reference.langchain.com/python/langchain-parallel/search_tool/ParallelWebSearchTool) API reference or the [Parallel search reference](https://docs.parallel.ai/api-reference/search-beta/search).
+
+---
+
+[Edit this page on GitHub](https://github.com/langchain-ai/docs/edit/main/src/oss/python/integrations/tools/parallel_search.mdx) or [file an issue](https://github.com/langchain-ai/docs/issues/new/choose).
+
+[Connect these docs](/use-these-docs) to Claude, VSCode, and more via MCP for real-time answers.

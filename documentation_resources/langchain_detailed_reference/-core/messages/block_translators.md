@@ -1,0 +1,221 @@
+<!-- Source: https://reference.langchain.com/python/langchain-core/messages/block_translators -->
+
+Modulev1.2.21 (latest)●Since v1.0
+
+# block\_translators
+
+Derivations of standard content blocks from provider content.
+
+`AIMessage` will first attempt to use a provider-specific translator if
+`model_provider` is set in `response_metadata` on the message. Consequently, each
+provider translator must handle all possible content response types from the provider,
+including text.
+
+If no provider is set, or if the provider does not have a registered translator,
+`AIMessage` will fall back to best-effort parsing of the content into blocks using
+the implementation in `BaseMessage`.
+
+## Attributes
+
+[attribute
+
+PROVIDER\_TRANSLATORS: dict[str, dict[str, Callable[..., list[types.ContentBlock]]]]
+
+Map model provider names to translator functions.
+
+The dictionary maps provider names (e.g. `'openai'`, `'anthropic'`) to another
+dictionary with two keys:
+
+- `'translate_content'`: Function to translate `AIMessage` content.
+- `'translate_content_chunk'`: Function to translate `AIMessageChunk` content.
+
+When calling `content_blocks` on an `AIMessage` or `AIMessageChunk`, if
+`model_provider` is set in `response_metadata`, the corresponding translator
+functions will be used to parse the content into blocks. Otherwise, best-effort parsing
+in `BaseMessage` will be used.](/python/langchain-core/messages/block_translators/PROVIDER_TRANSLATORS)
+
+## Functions
+
+[function
+
+register\_translator
+
+Register content translators for a provider in `PROVIDER_TRANSLATORS`.](/python/langchain-core/messages/block_translators/register_translator)[function
+
+get\_translator
+
+Get the translator functions for a provider.](/python/langchain-core/messages/block_translators/get_translator)
+
+## Classes
+
+[class
+
+AIMessage
+
+Message from an AI.
+
+An `AIMessage` is returned from a chat model as a response to a prompt.
+
+This message represents the output of the model and consists of both
+the raw output as returned by the model and standardized fields
+(e.g., tool calls, usage metadata) added by the LangChain framework.](/python/langchain-core/messages/ai/AIMessage)[class
+
+AIMessageChunk
+
+Message chunk from an AI (yielded when streaming).](/python/langchain-core/messages/ai/AIMessageChunk)
+
+## Modules
+
+[module
+
+types
+
+Standard, multimodal content blocks for Large Language Model I/O.
+
+This module provides standardized data structures for representing inputs to and outputs
+from LLMs. The core abstraction is the **Content Block**, a `TypedDict`.
+
+**Rationale**
+
+Different LLM providers use distinct and incompatible API schemas. This module provides
+a unified, provider-agnostic format to facilitate these interactions. A message to or
+from a model is simply a list of content blocks, allowing for the natural interleaving
+of text, images, and other content in a single ordered sequence.
+
+An adapter for a specific provider is responsible for translating this standard list of
+blocks into the format required by its API.
+
+**Extensibility**
+
+Data **not yet mapped** to a standard block may be represented using the
+`NonStandardContentBlock`, which allows for provider-specific data to be included
+without losing the benefits of type checking and validation.
+
+Furthermore, provider-specific fields **within** a standard block are fully supported
+by default in the `extras` field of each block. This allows for additional metadata
+to be included without breaking the standard structure. For example, Google's thought
+signature:
+
+```
+AIMessage(
+    content=[
+        {
+            "type": "text",
+            "text": "J'adore la programmation.",
+            "extras": {"signature": "EpoWCpc..."},  # Thought signature
+        }
+    ], ...
+)
+```
+
+Note
+
+Following widespread adoption of [PEP 728](https://peps.python.org/pep-0728/), we
+intend to add `extra_items=Any` as a param to Content Blocks. This will signify to
+type checkers that additional provider-specific fields are allowed outside of the
+`extras` field, and that will become the new standard approach to adding
+provider-specific metadata.
+
+Note
+
+**Example with PEP 728 provider-specific fields:**
+
+```
+# Content block definition
+# NOTE: `extra_items=Any`
+class TextContentBlock(TypedDict, extra_items=Any):
+    type: Literal["text"]
+    id: NotRequired[str]
+    text: str
+    annotations: NotRequired[list[Annotation]]
+    index: NotRequired[int]
+```
+
+```
+from langchain_core.messages.content import TextContentBlock
+
+# Create a text content block with provider-specific fields
+my_block: TextContentBlock = {
+    # Add required fields
+    "type": "text",
+    "text": "Hello, world!",
+    # Additional fields not specified in the TypedDict
+    # These are valid with PEP 728 and are typed as Any
+    "openai_metadata": {"model": "gpt-4", "temperature": 0.7},
+    "anthropic_usage": {"input_tokens": 10, "output_tokens": 20},
+    "custom_field": "any value",
+}
+
+# Mutating an existing block to add provider-specific fields
+openai_data = my_block["openai_metadata"]  # Type: Any
+```
+
+**Example Usage**
+
+```
+# Direct construction
+from langchain_core.messages.content import TextContentBlock, ImageContentBlock
+
+multimodal_message: AIMessage(
+    content_blocks=[
+        TextContentBlock(type="text", text="What is shown in this image?"),
+        ImageContentBlock(
+            type="image",
+            url="https://www.langchain.com/images/brand/langchain_logo_text_w_white.png",
+            mime_type="image/png",
+        ),
+    ]
+)
+
+# Using factories
+from langchain_core.messages.content import create_text_block, create_image_block
+
+multimodal_message: AIMessage(
+    content=[
+        create_text_block("What is shown in this image?"),
+        create_image_block(
+            url="https://www.langchain.com/images/brand/langchain_logo_text_w_white.png",
+            mime_type="image/png",
+        ),
+    ]
+)
+```
+
+Factory functions offer benefits such as:
+
+- Automatic ID generation (when not provided)
+- No need to manually specify the `type` field](/python/langchain-core/messages/content)[module
+
+google\_vertexai
+
+Derivations of standard content blocks from Google (VertexAI) content.](/python/langchain-core/messages/block_translators/google_vertexai)[module
+
+groq
+
+Derivations of standard content blocks from Groq content.](/python/langchain-core/messages/block_translators/groq)[module
+
+langchain\_v0
+
+Derivations of standard content blocks from LangChain v0 multimodal content.](/python/langchain-core/messages/block_translators/langchain_v0)[module
+
+bedrock\_converse
+
+Derivations of standard content blocks from Amazon (Bedrock Converse) content.](/python/langchain-core/messages/block_translators/bedrock_converse)[module
+
+openai
+
+Derivations of standard content blocks from OpenAI content.](/python/langchain-core/messages/block_translators/openai)[module
+
+google\_genai
+
+Derivations of standard content blocks from Google (GenAI) content.](/python/langchain-core/messages/block_translators/google_genai)[module
+
+bedrock
+
+Derivations of standard content blocks from Bedrock content.](/python/langchain-core/messages/block_translators/bedrock)[module
+
+anthropic
+
+Derivations of standard content blocks from Anthropic content.](/python/langchain-core/messages/block_translators/anthropic)
+
+

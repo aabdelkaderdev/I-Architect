@@ -1,0 +1,134 @@
+<!-- Source: https://docs.celeryq.dev/en/main/reference/celery.contrib.abortable.html -->
+
+This document describes the current stable version of Celery (5.6).
+For development docs,
+[go here](https://docs.celeryq.dev/en/main/reference/celery.contrib.abortable.html).
+
+# `celery.contrib.abortable`
+
+Abortable Tasks.
+
+## 
+
+For long-running `Task`’s, it can be desirable to support
+aborting during execution. Of course, these tasks should be built to
+support abortion specifically.
+
+The [`AbortableTask`](#celery.contrib.abortable.AbortableTask "celery.contrib.abortable.AbortableTask") serves as a base class for all `Task`
+objects that should support abortion by producers.
+
+- Producers may invoke the `abort()` method on
+  [`AbortableAsyncResult`](#celery.contrib.abortable.AbortableAsyncResult "celery.contrib.abortable.AbortableAsyncResult") instances, to request abortion.
+- Consumers (workers) should periodically check (and honor!) the
+  `is_aborted()` method at controlled points in their task’s
+  `run()` method. The more often, the better.
+
+The necessary intermediate communication is dealt with by the
+[`AbortableTask`](#celery.contrib.abortable.AbortableTask "celery.contrib.abortable.AbortableTask") implementation.
+
+### 
+
+In the consumer:
+
+```
+from celery.contrib.abortable import AbortableTask
+from celery.utils.log import get_task_logger
+
+from proj.celery import app
+
+logger = get_logger(__name__)
+
+@app.task(bind=True, base=AbortableTask)
+def long_running_task(self):
+    results = []
+    for i in range(100):
+        # check after every 5 iterations...
+        # (or alternatively, check when some timer is due)
+        if not i % 5:
+            if self.is_aborted():
+                # respect aborted state, and terminate gracefully.
+                logger.warning('Task aborted')
+                return
+            value = do_something_expensive(i)
+            results.append(y)
+    logger.info('Task complete')
+    return results
+```
+
+In the producer:
+
+```
+import time
+
+from proj.tasks import MyLongRunningTask
+
+def myview(request):
+    # result is of type AbortableAsyncResult
+    result = long_running_task.delay()
+
+    # abort the task after 10 seconds
+    time.sleep(10)
+    result.abort()
+```
+
+After the result.abort() call, the task execution isn’t
+aborted immediately. In fact, it’s not guaranteed to abort at all.
+Keep checking result.state status, or call result.get(timeout=) to
+have it block until the task is finished.
+
+Note
+
+In order to abort tasks, there needs to be communication between the
+producer and the consumer. This is currently implemented through the
+database backend. Therefore, this class will only work with the
+database backends.
+
+class celery.contrib.abortable.AbortableAsyncResult(*id*, *backend=None*, *task\_name=None*, *app=None*, *parent=None*)[[source]](../_modules/celery/contrib/abortable.html#AbortableAsyncResult)
+:   Represents an abortable result.
+
+    Specifically, this gives the AsyncResult a [`abort()`](#celery.contrib.abortable.AbortableAsyncResult.abort "celery.contrib.abortable.AbortableAsyncResult.abort") method,
+    that sets the state of the underlying Task to ‘ABORTED’.
+
+    abort()[[source]](../_modules/celery/contrib/abortable.html#AbortableAsyncResult.abort)
+    :   Set the state of the task to `ABORTED`.
+
+        Abortable tasks monitor their state at regular intervals and
+        terminate execution if so.
+
+        Warning
+
+        Be aware that invoking this method does not guarantee when the
+        task will be aborted (or even if the task will be aborted at all).
+
+    is\_aborted()[[source]](../_modules/celery/contrib/abortable.html#AbortableAsyncResult.is_aborted)
+    :   Return `True` if the task is (being) aborted.
+
+class celery.contrib.abortable.AbortableTask[[source]](../_modules/celery/contrib/abortable.html#AbortableTask)
+:   Task that can be aborted.
+
+    This serves as a base class for all `Task`’s
+    that support aborting during execution.
+
+    All subclasses of [`AbortableTask`](#celery.contrib.abortable.AbortableTask "celery.contrib.abortable.AbortableTask") must call the
+    [`is_aborted()`](#celery.contrib.abortable.AbortableTask.is_aborted "celery.contrib.abortable.AbortableTask.is_aborted") method periodically and act accordingly when
+    the call evaluates to `True`.
+
+    AsyncResult(*task\_id*)[[source]](../_modules/celery/contrib/abortable.html#AbortableTask.AsyncResult)
+    :   Return the accompanying AbortableAsyncResult instance.
+
+    abstract = True
+    :   Deprecated attribute `abstract` here for compatibility.
+
+    is\_aborted(*\*\*kwargs*)[[source]](../_modules/celery/contrib/abortable.html#AbortableTask.is_aborted)
+    :   Return true if task is aborted.
+
+        Checks against the backend whether this
+        [`AbortableAsyncResult`](#celery.contrib.abortable.AbortableAsyncResult "celery.contrib.abortable.AbortableAsyncResult") is `ABORTED`.
+
+        Always return `False` in case the task\_id parameter
+        refers to a regular (non-abortable) `Task`.
+
+        Be aware that invoking this method will cause a hit in the
+        backend (for example a database query), so find a good balance
+        between calling it regularly (for responsiveness), but not too
+        often (for performance).

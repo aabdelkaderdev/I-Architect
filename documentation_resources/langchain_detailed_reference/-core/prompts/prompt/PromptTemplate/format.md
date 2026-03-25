@@ -1,0 +1,23 @@
+<!-- Source: https://reference.langchain.com/python/langchain-core/prompts/prompt/PromptTemplate/format -->
+
+Methodv1.2.21 (latest)●Since v0.1
+
+# format
+
+Format the prompt with the inputs.
+
+
+```
+format(
+    self,
+    **kwargs: Any = {},
+) -> str
+```
+
+## Parameters
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `**kwargs` | `Any` | Default:`{}`  Any arguments to be passed to the prompt template. |
+
+

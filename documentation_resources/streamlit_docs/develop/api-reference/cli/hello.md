@@ -1,0 +1,43 @@
+<!-- Source: https://docs.streamlit.io/develop/api-reference/cli/hello -->
+
+Run the Hello app, an example Streamlit app included with the Streamlit library.
+
+```
+streamlit hello
+```
+
+The `hello` command accepts configuration options (just like the `run` command does). Configuration options are passed in the form of `--<section>.<option>=<value>`. For example, if you want to set the primary color of your app to blue, you could use one of the three equivalent options:
+
+- `--theme.primaryColor=blue`
+- `--theme.primaryColor="blue"`
+- `--theme.primaryColor=#0000FF`
+
+For a complete list of configuration options, see [`config.toml`](/develop/api-reference/configuration/config.toml) in the API reference. For examples, see below.
+
+#### Example 1: Run the Hello app with default settings
+
+To verify that Streamlit is installed correctly, this command runs an example app included in the Streamlit library. From any directory, execute the following:
+
+```
+streamlit hello
+```
+
+Streamlit will start the Hello app and open it in your default browser. The source for the Hello app can be [viewed in GitHub](https://github.com/streamlit/streamlit/tree/develop/lib/streamlit/hello).
+
+#### Example 2: Run the Hello app with a custom config option value
+
+To run the Hello app with a blue accent color, from any directory, execute the following:
+
+```
+streamlit hello --theme.primaryColor=blue
+```
+
+[*arrow\_back*Previous: streamlit docs](/develop/api-reference/cli/docs)[*arrow\_forward*Next: streamlit help](/develop/api-reference/cli/help)
+
+*forum*
+
+### Still have questions?
+
+Our [forums](https://discuss.streamlit.io) are full of helpful information and Streamlit experts.
+
+*forum* Ask AI

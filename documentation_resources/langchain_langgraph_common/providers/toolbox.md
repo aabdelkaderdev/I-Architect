@@ -1,0 +1,33 @@
+<!-- Source: https://docs.langchain.com/oss/python/integrations/providers/toolbox -->
+
+The [MCP Toolbox](https://googleapis.github.io/genai-toolbox/getting-started/introduction/) in LangChain allows you to equip an agent with a set of tools. When the agent receives a query, it can intelligently select and use the most appropriate tool provided by MCP Toolbox to fulfill the request.
+
+## [​](#what-is-it) What is it?
+
+MCP Toolbox is essentially a container for your tools. Think of it as a multi-tool device for your agent; it can hold any tools you create. The agent then decides which specific tool to use based on the user’s input.
+This is particularly useful when you have an agent that needs to perform a variety of tasks that require different capabilities.
+
+## [​](#installation) Installation
+
+To get started, you’ll need to install the necessary package:
+
+pip
+
+uv
+
+Copy
+
+```
+pip install toolbox-langchain
+```
+
+## [​](#tutorial) Tutorial
+
+For a complete, step-by-step guide on how to create, configure, and use MCP Toolbox with your agents, please refer to our detailed Jupyter notebook tutorial.
+**[➡️ View the full tutorial here](/oss/python/integrations/tools/mcp_toolbox)**.
+
+---
+
+[Edit this page on GitHub](https://github.com/langchain-ai/docs/edit/main/src/oss/python/integrations/providers/toolbox.mdx) or [file an issue](https://github.com/langchain-ai/docs/issues/new/choose).
+
+[Connect these docs](/use-these-docs) to Claude, VSCode, and more via MCP for real-time answers.

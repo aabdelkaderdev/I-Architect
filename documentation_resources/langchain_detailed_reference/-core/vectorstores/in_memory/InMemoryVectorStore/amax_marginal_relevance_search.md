@@ -1,0 +1,19 @@
+<!-- Source: https://reference.langchain.com/python/langchain-core/vectorstores/in_memory/InMemoryVectorStore/amax_marginal_relevance_search -->
+
+Methodv1.2.21 (latest)●Since v0.2
+
+# amax\_marginal\_relevance\_search
+
+
+```
+amax_marginal_relevance_search(
+  self,
+  query: str,
+  k: int = 4,
+  fetch_k: int = 20,
+  lambda_mult: float = 0.5,
+  **kwargs: Any = {}
+) -> list[Document]
+```
+
+

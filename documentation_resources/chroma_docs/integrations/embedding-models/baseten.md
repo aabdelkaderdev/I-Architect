@@ -1,0 +1,29 @@
+<!-- Source: https://docs.trychroma.com/integrations/embedding-models/baseten -->
+
+Chroma provides a convenient integration with any OpenAI-compatible embedding model deployed on Baseten. Every embedding model deployed with BEI is compatible with the OpenAI SDK.
+Get started easily with an embedding model from Baseten’s model library, like [Mixedbread Embed Large](https://www.baseten.co/library/mixedbread-embed-large-v1/).
+
+## [​](#using-baseten-models-with-chroma) Using Baseten models with Chroma
+
+This embedding function relies on the openai python package, which you can install with pip install openai.
+You must set the api\_key and api\_base, replacing the api\_base with the URL from the model deployed in your Baseten account.
+
+Python
+
+Report incorrect code
+
+Copy
+
+Ask AI
+
+```
+import os
+import chromadb.utils.embedding_functions as embedding_functions
+
+baseten_ef = embedding_functions.BasetenEmbeddingFunction(
+    api_key=os.environ["BASETEN_API_KEY"],
+    api_base="https://model-xxxxxxxx.api.baseten.co/environments/production/sync/v1",
+)
+
+baseten_ef(input=["This is my first text to embed", "This is my second document"])
+```

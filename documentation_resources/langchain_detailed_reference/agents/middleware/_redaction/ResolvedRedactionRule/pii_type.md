@@ -1,0 +1,12 @@
+<!-- Source: https://reference.langchain.com/python/langchain/agents/middleware/_redaction/ResolvedRedactionRule/pii_type -->
+
+Attributev1.2.13 (latest)●Since v1.0
+
+# pii\_type
+
+
+```
+pii_type: str
+```
+
+
