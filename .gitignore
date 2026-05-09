@@ -28,3 +28,9 @@ arlo.egg-info/
 # AI / Agent tooling
 .claude/
 .agents/
+.codex/
+
+# Misc
+Miscellenious/
+codexsessiontoken
+arlo_*_graph.png
