@@ -2,8 +2,9 @@
 __pycache__/
 *.pyc
 
-# Model weights (re-download with download_model.sh)
+# Model weights (run ./download_model.sh to fetch)
 arlo/models/
+models.7z
 
 # Lock files
 skills-lock.json
@@ -12,8 +13,6 @@ skills-lock.json
 phase_4_execution_and_resilience.md
 phase_3_graph_wiring_and_fanout.md
 
-# Scripts
-download_model.sh
 
 # Pip artifacts
 =0.8.0
