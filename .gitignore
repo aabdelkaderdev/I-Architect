@@ -1,0 +1,31 @@
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Model weights (re-download with download_model.sh)
+arlo/models/
+
+# Lock files
+skills-lock.json
+
+# Phase docs (done)
+phase_4_execution_and_resilience.md
+phase_3_graph_wiring_and_fanout.md
+
+# Scripts
+download_model.sh
+
+# Pip artifacts
+=0.8.0
+
+# Project directories
+Skills/
+plans_done/
+arlo.egg-info/
+
+# Virtual environment
+.venv/
+
+# AI / Agent tooling
+.claude/
+.agents/
