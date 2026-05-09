@@ -31,7 +31,7 @@ from arlo.nodes.weights import (
     normalize_weights,
 )
 from arlo.state.config import ExperimentConfig
-from arlo.state.schemas import ARLOInput, ARLOOutput, ARLOState
+from arlo.state.schemas import ARLOContext, ARLOInput, ARLOOutput, ARLOState
 
 
 class InfluentialState(ARLOState, total=False):
@@ -266,6 +266,7 @@ def build_influential_sets() -> StateGraph:
         InfluentialState,
         input_schema=ARLOInput,
         output_schema=ARLOOutput,
+        context_schema=ARLOContext,
     )
 
     builder.add_node("parse_requirements", parse_requirements)

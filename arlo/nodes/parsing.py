@@ -8,11 +8,13 @@ from __future__ import annotations
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.func import task  # Compliance fix: explicit import
+from langgraph.runtime import Runtime
 
 from arlo.llm import render_template
+from arlo.nodes.runtime import get_llm
 from arlo.state.config import ExperimentConfig
 from arlo.state.models import ParsedBatch
-from arlo.state.schemas import ARLOState
+from arlo.state.schemas import ARLOContext, ARLOState
 from arlo.utils.text_processing import batch_requirements
 
 
@@ -80,13 +82,16 @@ def _parse_batch(
     return parsed_requirements
 
 
-def parse_requirements(state: ARLOState) -> dict:
+def parse_requirements(
+    state: ARLOState,
+    runtime: Runtime[ARLOContext] | None = None,
+) -> dict:
     """Node: Parse all requirements into ASRs via batched LLM calls.
 
     Reads: requirements, experiment_config, llm
     Writes: asrs, parsing_stats
     """
-    llm = state["llm"]
+    llm = get_llm(state, runtime)
     config = ExperimentConfig.from_dict(state["experiment_config"])
 
     system_instructions = render_template("asr_classification", {

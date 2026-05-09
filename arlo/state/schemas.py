@@ -17,7 +17,7 @@ from __future__ import annotations
 from operator import add
 from typing import Annotated, Any, Dict
 
-from typing_extensions import TypedDict
+from typing_extensions import NotRequired, TypedDict
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +28,15 @@ class ARLOInput(TypedDict):
     requirements: Dict[str, str]          # Mapping of Requirement ID → description
     experiment_config: dict               # Includes optimizer, mode, batch_size, etc.
     matrix: dict[str, dict[str, int]]     # Pre-loaded quality–architecture pattern matrix
-    llm: Any                              # Pre-instantiated LangChain LLM instance
+    llm: NotRequired[Any]  # Dev fallback only. Do not pass when checkpointing.
+
+
+# ---------------------------------------------------------------------------
+# Runtime Context — not checkpointed, passed via context={"llm": llm}
+# ---------------------------------------------------------------------------
+class ARLOContext(TypedDict):
+    """Runtime-only dependencies that must not be checkpointed."""
+    llm: Any
 
 
 # ---------------------------------------------------------------------------

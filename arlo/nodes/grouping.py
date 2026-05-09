@@ -9,11 +9,14 @@ These types are wired via add_sequence in Phase 3.
 from __future__ import annotations
 
 from langchain_core.messages import HumanMessage
+from langgraph.runtime import Runtime
 from pydantic import BaseModel
 
 from arlo.llm import render_template
+from arlo.nodes.runtime import get_llm
 from arlo.state.models import SatGroup
 from arlo.state.schemas import (
+    ARLOContext,
     ARLOState,
     EquivalenceOutput,
     GroupBuilderInput,
@@ -28,13 +31,16 @@ class EquivalenceResult(BaseModel):
 # ---------------------------------------------------------------------------
 # Condition Equivalence (private state producer)
 # ---------------------------------------------------------------------------
-def check_condition_equivalence(state: ARLOState) -> EquivalenceOutput:
+def check_condition_equivalence(
+    state: ARLOState,
+    runtime: Runtime[ARLOContext] | None = None,
+) -> EquivalenceOutput:
     """Node: Check pairwise condition equivalence via LLM.
     Reads: asrs, llm, cluster_assignments
     Writes (private): similarity_matrix → consumed by build_condition_groups
     """
     asrs: list[dict] = state["asrs"]
-    llm = state["llm"]
+    llm = get_llm(state, runtime)
     cluster_assignments: list[int] = state["cluster_assignments"]
     similarity_matrix: list[tuple[int, int, bool]] = []
 
@@ -185,12 +191,15 @@ def build_condition_groups(state: GroupBuilderInput) -> dict:
 # ---------------------------------------------------------------------------
 # Satisfiable Group Generation (LLM call)
 # ---------------------------------------------------------------------------
-def generate_satisfiable_groups(state: ARLOState) -> dict:
+def generate_satisfiable_groups(
+    state: ARLOState,
+    runtime: Runtime[ARLOContext] | None = None,
+) -> dict:
     """Node: Organize conditions into co-satisfiable groups via structured LLM output.
     Reads: condition_groups, llm
     Writes: satisfiable_groups, sat_parse_success, sat_parse_attempts
     """
-    llm = state["llm"]
+    llm = get_llm(state, runtime)
     condition_groups = state["condition_groups"]
 
     # Template already contains all instructions.

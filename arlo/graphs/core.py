@@ -18,7 +18,7 @@ from arlo.nodes.grouping import (
 from arlo.nodes.optimization import assign_concern_workers, concern_worker
 from arlo.nodes.parsing import parse_requirements
 from arlo.nodes.weights import infer_quality_weights
-from arlo.state.schemas import ARLOInput, ARLOOutput, ARLOState
+from arlo.state.schemas import ARLOContext, ARLOInput, ARLOOutput, ARLOState
 
 
 def build_arlo_subgraph() -> StateGraph:
@@ -34,6 +34,7 @@ def build_arlo_subgraph() -> StateGraph:
         ARLOState,
         input_schema=ARLOInput,
         output_schema=ARLOOutput,
+        context_schema=ARLOContext,
     )
 
     # ----- Register all nodes -----

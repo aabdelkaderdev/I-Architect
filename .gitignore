@@ -33,4 +33,6 @@ arlo.egg-info/
 # Misc
 Miscellenious/
 codexsessiontoken
+claudecodesessiontoken
 arlo_*_graph.png
+checkpoints/
