@@ -6,17 +6,20 @@ survive crashes and are not re-executed on resume.
 """
 from __future__ import annotations
 
+import logging
+
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.func import task  # Compliance fix: explicit import
 from langgraph.runtime import Runtime
 
 from arlo.llm import render_template
-from arlo.nodes.runtime import get_llm
+from arlo.nodes.runtime import get_llm, get_progress_callback, is_cancelled
 from arlo.state.config import ExperimentConfig
 from arlo.state.models import ParsedBatch
 from arlo.state.schemas import ARLOContext, ARLOState
 from arlo.utils.text_processing import batch_requirements
 
+logger = logging.getLogger(__name__)
 
 _CONDITIONLESS = "under any circumstances"
 
@@ -30,6 +33,10 @@ _QUALITY_ATTRIBUTES = [
     {"name": "Portability", "description": "Adaptable to different environments."},
     {"name": "Cost Efficiency", "description": "Keep the overall cost (including development, operations, and maintenance) as low as possible."},
 ]
+
+
+class ARLOCancelled(Exception):
+    """Raised when the orchestrator requests graceful cancellation mid-batch."""
 
 
 def _normalize_condition_text(condition_text: str | None) -> str:
@@ -89,10 +96,16 @@ def parse_requirements(
     """Node: Parse all requirements into ASRs via batched LLM calls.
 
     Reads: requirements, experiment_config, llm
-    Writes: asrs, parsing_stats
+    Writes: asrs, non_asr, parsing_stats
+
+    Orchestrator integration:
+    - Calls progress_callback(batch, total) after each batch (§8D).
+    - Checks cancellation_flag before each batch (§4E). If set, persists
+      the checkpoint and raises ARLOCancelled for the orchestrator to handle.
     """
     llm = get_llm(state, runtime)
     config = ExperimentConfig.from_dict(state["experiment_config"])
+    progress_callback = get_progress_callback(runtime)
 
     system_instructions = render_template("asr_classification", {
         "stringent": config.mode == "stringent",
@@ -101,13 +114,37 @@ def parse_requirements(
 
     # Batch and dispatch
     batches = batch_requirements(state["requirements"], config.batch_size)
-    futures = [_parse_batch(batch, system_instructions, llm) for batch in batches]
+    total_batches = len(batches)
+    futures = []
+
+    for batch_idx, batch in enumerate(batches):
+        # §4E: Check cancellation at batch boundaries
+        if is_cancelled(runtime):
+            logger.info(
+                "Cancellation requested at batch %d/%d — persisting checkpoint.",
+                batch_idx + 1, total_batches,
+            )
+            raise ARLOCancelled(
+                f"ARLO parsing cancelled at batch {batch_idx + 1}/{total_batches}"
+            )
+
+        futures.append(_parse_batch(batch, system_instructions, llm))
+
+        # §8D: Report progress after dispatching each batch
+        if progress_callback:
+            progress_callback(batch_idx + 1, total_batches)
+
     all_parsed = [item for f in futures for item in f.result()]
 
-    # Filter architecturally significant requirements
+    # Separate architecturally significant vs non-ASR requirements
     asrs = [r for r in all_parsed if r["is_architecturally_significant"]]
+    non_asr = [
+        r["id"] for r in all_parsed
+        if not r["is_architecturally_significant"]
+    ]
 
     return {
         "asrs": asrs,
+        "non_asr": non_asr,
         "parsing_stats": {"total": len(all_parsed), "asr_count": len(asrs)},
     }

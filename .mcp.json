@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "pyqt-fluent-docs": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "pyqt-fluent-mcp"
+      ]
+    },
+    "qt-for-python-docs": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "qtforpython-mcp"
+      ]
+    }
+  }
+}

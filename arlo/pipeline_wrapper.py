@@ -44,9 +44,11 @@ def create_arlo_wrapper(
         Expected parent state keys:
         - extracted_requirements: Dict[str, str]
         - matrix: dict[str, dict[str, int]]
-        - llm: Any (pre-instantiated LangChain LLM)
         - experiment_config: dict (optional, defaults provided)
         - arlo_thread_id: str (optional when parent config has thread_id)
+
+        LLM, progress_callback, and cancellation_flag are read from the
+        parent's runtime context (§3C, §8D, §4E) — never from state.
         """
         parent_configurable = (config or {}).get("configurable", {})
         parent_thread_id = parent_configurable.get("thread_id")
@@ -70,6 +72,18 @@ def create_arlo_wrapper(
             },
         )
 
+        # Build ARLO context from the parent's runtime context (§3C, §8D, §4E).
+        # LLM objects are never stored in state channels — the orchestrator
+        # passes them via context={} to prevent checkpoint serialization issues.
+        parent_context = (config or {}).get("context", {})
+        arlo_context: dict[str, Any] = {"llm": parent_context["llm"]}
+
+        # Thread optional orchestrator callbacks
+        if "progress_callback" in parent_context:
+            arlo_context["progress_callback"] = parent_context["progress_callback"]
+        if "cancellation_flag" in parent_context:
+            arlo_context["cancellation_flag"] = parent_context["cancellation_flag"]
+
         arlo_output = arlo_graph.invoke(
             {
                 "requirements": state["extracted_requirements"],
@@ -77,15 +91,18 @@ def create_arlo_wrapper(
                 "matrix": state["matrix"],
             },
             {"configurable": {"thread_id": str(arlo_thread_id)}},
-            context={"llm": state["llm"]},
+            context=arlo_context,
             durability="sync",
         )
 
         return {
             "identified_asrs": arlo_output["asrs"],
+            "non_asr": arlo_output["non_asr"],
+            "condition_groups": arlo_output["condition_groups"],
             "architectural_concerns": arlo_output["concerns"],
             "quality_weights": arlo_output["quality_weights"],
             "arlo_stats": arlo_output["stats"],
         }
 
     return call_arlo
+

@@ -8,10 +8,8 @@ models.7z
 
 # Lock files
 skills-lock.json
-
-# Phase docs (done)
-phase_4_execution_and_resilience.md
-phase_3_graph_wiring_and_fanout.md
+uv.lock
+embeddings/
 
 
 # Pip artifacts

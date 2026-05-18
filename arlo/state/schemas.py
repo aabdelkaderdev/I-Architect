@@ -34,19 +34,39 @@ class ARLOInput(TypedDict):
 # ---------------------------------------------------------------------------
 # Runtime Context — not checkpointed, passed via context={"llm": llm}
 # ---------------------------------------------------------------------------
-class ARLOContext(TypedDict):
-    """Runtime-only dependencies that must not be checkpointed."""
+class ARLOContext(TypedDict, total=False):
+    """Runtime-only dependencies that must not be checkpointed.
+
+    - llm: Pre-instantiated LangChain ChatModel (required).
+    - progress_callback: Orchestrator-injected callback for batch progress
+      reporting (§8D). Signature: (batch: int, total: int) -> None.
+    - cancellation_flag: Orchestrator-injected threading.Event for graceful
+      cancellation at batch boundaries (§4E).
+    """
     llm: Any
+    progress_callback: Any   # Callable[[int, int], None] | None
+    cancellation_flag: Any   # threading.Event | None
 
 
 # ---------------------------------------------------------------------------
 # Output Schema — returned to the parent pipeline
 # ---------------------------------------------------------------------------
 class ARLOOutput(TypedDict):
-    """Output schema for ARLO subgraph. Returned to the parent pipeline."""
+    """Output schema for ARLO subgraph. Returned to the parent pipeline.
+
+    The orchestrator threads these channels to downstream agents (§4B):
+    - asrs → RAA.asrs
+    - non_asr → RAA.non_asr (via requirements_data packing)
+    - condition_groups → RAA.condition_groups
+    - quality_weights → RAA.quality_weights (via requirements_data packing)
+    - concerns → RGA (for reporting)
+    - stats → RGA (for reporting)
+    """
     concerns: list[dict]
     stats: dict
     asrs: list[dict]
+    non_asr: list[str]                        # Non-ASR requirement IDs
+    condition_groups: list[dict]              # Condition groups for RAA
     quality_weights: dict[str, int]
 
 
@@ -58,6 +78,7 @@ class ARLOState(ARLOInput, ARLOOutput):
 
     # Stage 1: Parsing
     asrs: list[dict]
+    non_asr: list[str]                            # Non-ASR requirement IDs
     parsing_stats: dict                           # {total, asr_count}
 
     # Stage 2: Embedding & Clustering

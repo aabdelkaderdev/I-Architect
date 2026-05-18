@@ -1,12 +1,12 @@
 [project]
-name = "arlo"
-version = "0.1.0"
-description = "ARLO — Architectural Reasoning via LangGraph Orchestration"
+name = "I-Architect"
+version = "1.0"
+description = "I-Architect - Generative AI for Software Engineering Architecture Diagrams"
 requires-python = ">=3.11"
 
 dependencies = [
-    "langgraph==1.1.10",
-    "langchain==1.2.17",
+    "langgraph==1.2.0",
+    " langchain==1.3.0",
     "langgraph-checkpoint-sqlite==3.0.3",
     "mip>=1.17",
     "fastembed==0.8.0",

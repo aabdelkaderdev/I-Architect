@@ -44,15 +44,16 @@ def compile_for_development():
 
 
 def compile_for_production(
-    db_path: str | Path = "checkpoints/arlo.db",
+    db_path: str | Path,
 ):
     """Compile the ARLO graph with SQLite checkpointing (production).
 
     Uses SqliteSaver — state survives crashes and process restarts.
 
     Args:
-        db_path: Path to the SQLite database file. Parent directories
-                 will be created if they don't exist.
+        db_path: Path to the SQLite database file. The orchestrator passes
+                 a project-scoped path: ``projects/{name}/checkpoints/arlo.db``
+                 (§6C). Parent directories will be created if they don't exist.
     """
     db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)

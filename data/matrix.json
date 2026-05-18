@@ -1,0 +1,172 @@
+{
+  "Monolith": {
+    "Performance Efficiency": 0,
+    "Compatibility": 0,
+    "Usability": 0,
+    "Reliability": -1,
+    "Security": 1,
+    "Maintainability": -1,
+    "Portability": 0,
+    "Cost Efficiency": -1
+  },
+  "Microservices": {
+    "Performance Efficiency": 1,
+    "Compatibility": 1,
+    "Usability": 0,
+    "Reliability": 1,
+    "Security": 0,
+    "Maintainability": 1,
+    "Portability": 1,
+    "Cost Efficiency": 0
+  },
+  "Peer-to-Peer": {
+    "Performance Efficiency": 0,
+    "Compatibility": 0,
+    "Usability": 0,
+    "Reliability": 1,
+    "Security": -1,
+    "Maintainability": -1,
+    "Portability": 0,
+    "Cost Efficiency": 1
+  },
+  "Always On": {
+    "Performance Efficiency": -1,
+    "Compatibility": 0,
+    "Usability": 1,
+    "Reliability": 1,
+    "Security": 1,
+    "Maintainability": 0,
+    "Portability": 0,
+    "Cost Efficiency": -1
+  },
+  "Offline First": {
+    "Performance Efficiency": 1,
+    "Compatibility": 0,
+    "Usability": 1,
+    "Reliability": 1,
+    "Security": -1,
+    "Maintainability": 0,
+    "Portability": 0,
+    "Cost Efficiency": 0
+  },
+  "API-Call": {
+    "Performance Efficiency": 0,
+    "Compatibility": 1,
+    "Usability": 0,
+    "Reliability": 0,
+    "Security": 1,
+    "Maintainability": 0,
+    "Portability": 0,
+    "Cost Efficiency": 0
+  },
+  "Message-Based": {
+    "Performance Efficiency": 0,
+    "Compatibility": 1,
+    "Usability": 0,
+    "Reliability": 1,
+    "Security": 0,
+    "Maintainability": 1,
+    "Portability": 0,
+    "Cost Efficiency": 0
+  },
+  "WebSocket": {
+    "Performance Efficiency": 1,
+    "Compatibility": 0,
+    "Usability": 1,
+    "Reliability": 0,
+    "Security": -1,
+    "Maintainability": -1,
+    "Portability": 0,
+    "Cost Efficiency": 0
+  },
+  "Central": {
+    "Performance Efficiency": 0,
+    "Compatibility": 0,
+    "Usability": 0,
+    "Reliability": -1,
+    "Security": 0,
+    "Maintainability": 1,
+    "Portability": 0,
+    "Cost Efficiency": 1
+  },
+  "Hot-Hot": {
+    "Performance Efficiency": 1,
+    "Compatibility": 0,
+    "Usability": 0,
+    "Reliability": 1,
+    "Security": 0,
+    "Maintainability": -1,
+    "Portability": 0,
+    "Cost Efficiency": -1
+  },
+  "Hot-Cold": {
+    "Performance Efficiency": 0,
+    "Compatibility": 0,
+    "Usability": 0,
+    "Reliability": 1,
+    "Security": 0,
+    "Maintainability": 0,
+    "Portability": 0,
+    "Cost Efficiency": 0
+  },
+  "SQL": {
+    "Performance Efficiency": 0,
+    "Compatibility": 1,
+    "Usability": 0,
+    "Reliability": 0,
+    "Security": 1,
+    "Maintainability": 0,
+    "Portability": 0,
+    "Cost Efficiency": 0
+  },
+  "NoSQL": {
+    "Performance Efficiency": 1,
+    "Compatibility": 1,
+    "Usability": 0,
+    "Reliability": 1,
+    "Security": 0,
+    "Maintainability": -1,
+    "Portability": 0,
+    "Cost Efficiency": -1
+  },
+  "Proactive": {
+    "Performance Efficiency": 1,
+    "Compatibility": 0,
+    "Usability": 0,
+    "Reliability": 1,
+    "Security": 1,
+    "Maintainability": 1,
+    "Portability": 0,
+    "Cost Efficiency": -1
+  },
+  "Reactive": {
+    "Performance Efficiency": 0,
+    "Compatibility": -1,
+    "Usability": 1,
+    "Reliability": 0,
+    "Security": 0,
+    "Maintainability": -1,
+    "Portability": -1,
+    "Cost Efficiency": 1
+  },
+  "Real-time Sync": {
+    "Performance Efficiency": 1,
+    "Compatibility": 0,
+    "Usability": 1,
+    "Reliability": 0,
+    "Security": 0,
+    "Maintainability": -1,
+    "Portability": 0,
+    "Cost Efficiency": -1
+  },
+  "Batch Processing": {
+    "Performance Efficiency": 0,
+    "Compatibility": 0,
+    "Usability": -1,
+    "Reliability": 1,
+    "Security": 0,
+    "Maintainability": 1,
+    "Portability": 0,
+    "Cost Efficiency": 1
+  }
+}
