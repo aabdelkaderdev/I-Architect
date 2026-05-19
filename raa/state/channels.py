@@ -94,6 +94,7 @@ class RAAState(TypedDict, total=False):
     # Single-writer (default overwrite)
     batch_queue: list[Batch]
     batch_cursor: int
+    batch_ordering_strategy: str
     running_arch_model: ArchModel
     bridge_requirements: dict[tuple, list[str]]
     embeddings_ready: bool

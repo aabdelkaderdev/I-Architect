@@ -72,14 +72,37 @@ class DiagramManifestEntry:
 # Batch TypedDict
 # ---------------------------------------------------------------------------
 
+class SortingMetadata(TypedDict, total=False):
+    """Per-batch ordering metadata written by the queue ordering node.
+
+    Fields: score (float), strategy (str), tie_breaker (str).
+    """
+
+    score: float
+    strategy: str
+    tie_breaker: str
+
+
 class Batch(TypedDict, total=False):
-    """Ordered batch of requirements for one RAA execution unit."""
+    """Ordered batch of requirements for one RAA execution unit.
+
+    Extended per RAA_Plan.md Section 8 with cluster labels, full normalized
+    requirement payloads, similarity scores, and non-ASR candidate records.
+    """
 
     batch_id: int
     group_id: int
     requirement_ids: list[str]
     group_centroid: list[float] | None
     reduced_confidence: bool
+    cluster: list[str]
+    requirements: list[dict]
+    similarity_scores: dict[str, float]
+    non_asr_candidates: list[dict]
+    coherence_score: float
+    is_split: bool
+    source_batch_id: int
+    sorting_metadata: SortingMetadata
 
 
 # ---------------------------------------------------------------------------
@@ -217,4 +240,18 @@ class ArchModel:
     persons: list[ArchPerson] = field(default_factory=list)
     external_systems: list[ArchExternalSystem] = field(default_factory=list)
     patterns: list[ArchPattern] = field(default_factory=list)
+    diagram_manifest: list[DiagramManifestEntry] = field(default_factory=list)
+    confidence_metadata: dict[str, ConfidenceRecord] = field(default_factory=dict)
     open_questions: list[OpenQuestion] = field(default_factory=list)
+
+
+@dataclass
+class FailureRegisterEntry:
+    """Represents a monitored runtime risk and its active mitigation."""
+
+    risk_id: str
+    description: str
+    mitigation_strategy: str
+    section_ref: str
+    verified_node: str
+

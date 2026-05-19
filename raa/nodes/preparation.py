@@ -18,6 +18,8 @@ from pathlib import Path
 
 from fastembed import TextEmbedding
 
+from raa.utils.db import open_embedding_db
+
 logger = logging.getLogger(__name__)
 
 _MODEL_NAME = "mixedbread-ai/mxbai-embed-large-v1"
@@ -42,13 +44,8 @@ def _non_asr_db_path() -> Path:
 
 
 # ---------------------------------------------------------------------------
-# SQLite connection & schema
+# SQLite schema
 # ---------------------------------------------------------------------------
-def _connect_embedding_db(db_path: Path) -> sqlite3.Connection:
-    """Open a SQLite connection with WAL journal mode enabled."""
-    conn = sqlite3.connect(str(db_path))
-    conn.execute("PRAGMA journal_mode=WAL")
-    return conn
 
 
 def _ensure_embeddings_schema(conn: sqlite3.Connection):
@@ -156,9 +153,16 @@ def _verify_asr_embeddings(asrs: list[dict], asr_db_path: Path):
             "Re-run ARLO to generate ASR embeddings before running RAA."
         )
 
-    conn = _connect_embedding_db(asr_db_path)
+    conn = open_embedding_db(asr_db_path, read_only=True)
     try:
-        _ensure_embeddings_schema(conn)
+        # Check model name consistency
+        rows = conn.execute("SELECT DISTINCT model_name FROM embeddings").fetchall()
+        for (model_name,) in rows:
+            if model_name != _MODEL_NAME:
+                raise ValueError(
+                    f"ASR embedding database uses model '{model_name}', "
+                    f"but expected '{_MODEL_NAME}'"
+                )
 
         existing = set(
             row[0] for row in conn.execute("SELECT requirement_id FROM embeddings")
@@ -202,9 +206,18 @@ def _persist_non_asr_embeddings(
     _EMBEDDINGS_DIR = _project_root() / "embeddings"
     _EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
 
-    conn = _connect_embedding_db(non_asr_db_path)
+    conn = open_embedding_db(non_asr_db_path, read_only=False)
     try:
         _ensure_embeddings_schema(conn)
+
+        # Check model name consistency
+        rows = conn.execute("SELECT DISTINCT model_name FROM embeddings").fetchall()
+        for (model_name,) in rows:
+            if model_name != _MODEL_NAME:
+                raise ValueError(
+                    f"non-ASR embedding database uses model '{model_name}', "
+                    f"but expected '{_MODEL_NAME}'"
+                )
 
         cached = _load_cached_hashes(conn)
 
@@ -215,9 +228,12 @@ def _persist_non_asr_embeddings(
             current_hash = _hash_text(text) if text else ""
             req_id = _requirement_id_int(req)
 
-            if req_id not in cached or cached[req_id] != current_hash:
+            if req_id not in cached:
                 to_embed.append(req)
-            elif req_id in cached and cached[req_id] == current_hash:
+            elif cached[req_id] != current_hash:
+                logger.warning("Stale embedding detected for requirement ID %d. Recomputing.", req_id)
+                to_embed.append(req)
+            else:
                 logger.debug("Skipping requirement %d — hash unchanged.", req_id)
 
         if to_embed:
@@ -260,13 +276,32 @@ def prepare_embeddings(state: dict) -> dict:
     embeddings stay in SQLite and are read by downstream batch-construction
     nodes on demand.
     """
+    if state.get("embeddings_ready", False) is True:
+        return {}
+
     asrs = state.get("asrs", [])
     non_asrs = state.get("non_asr", [])
 
-    _verify_asr_embeddings(asrs, _asr_db_path())
+    asr_db = _asr_db_path()
+    non_asr_db = _non_asr_db_path()
+
+    try:
+        _verify_asr_embeddings(asrs, asr_db)
+    except sqlite3.DatabaseError as e:
+        raise RuntimeError(
+            f"ASR embedding database is corrupt: {e}. Please re-run ARLO."
+        ) from e
 
     model = _get_embedding_model()
-    _persist_non_asr_embeddings(non_asrs, _non_asr_db_path(), model=model)
+    try:
+        _persist_non_asr_embeddings(non_asrs, non_asr_db, model=model)
+    except (sqlite3.DatabaseError, sqlite3.OperationalError) as e:
+        logger.warning(
+            "Non-ASR embedding DB is corrupt or missing: %s. Rebuilding from scratch.",
+            e,
+        )
+        non_asr_db.unlink(missing_ok=True)
+        _persist_non_asr_embeddings(non_asrs, non_asr_db, model=model)
 
     logger.info(
         "Embedding readiness confirmed — %d ASRs verified, %d non-ASRs persisted.",

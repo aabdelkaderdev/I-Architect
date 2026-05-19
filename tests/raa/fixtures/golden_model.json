@@ -1,0 +1,303 @@
+{
+  "confidence_metadata": {
+    "sys_1": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "sys_2": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "cont_1": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "cont_2": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "cont_3": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "comp_1": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "comp_2": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "comp_3": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "comp_4": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "pers_1": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "pers_2": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    },
+    "ext_sys_1": {
+      "reduced_confidence": false,
+      "saam_score": 1.0,
+      "source_batch": -1
+    }
+  },
+  "diagram_manifest": [
+    {
+      "diagram_id": "ctx-sys_1",
+      "diagram_type": "context",
+      "focus_entity_id": "sys_1",
+      "label": "System Context — System 1"
+    },
+    {
+      "diagram_id": "cnt-sys_1",
+      "diagram_type": "container",
+      "focus_entity_id": "sys_1",
+      "label": "System Container — System 1"
+    },
+    {
+      "diagram_id": "cmp-cont_1",
+      "diagram_type": "component",
+      "focus_entity_id": "cont_1",
+      "label": "Component Diagram — Container 1"
+    },
+    {
+      "diagram_id": "cmp-cont_2",
+      "diagram_type": "component",
+      "focus_entity_id": "cont_2",
+      "label": "Component Diagram — Container 2"
+    },
+    {
+      "diagram_id": "ctx-sys_2",
+      "diagram_type": "context",
+      "focus_entity_id": "sys_2",
+      "label": "System Context — System 2"
+    },
+    {
+      "diagram_id": "cnt-sys_2",
+      "diagram_type": "container",
+      "focus_entity_id": "sys_2",
+      "label": "System Container — System 2"
+    },
+    {
+      "diagram_id": "cmp-cont_3",
+      "diagram_type": "component",
+      "focus_entity_id": "cont_3",
+      "label": "Component Diagram — Container 3"
+    }
+  ],
+  "external_systems": [
+    {
+      "confidence": 1.0,
+      "description": "External dependency",
+      "id": "ext_sys_1",
+      "label": "External System 1",
+      "requirement_ids": [],
+      "source_fragment": "raa_a",
+      "technology": "REST"
+    }
+  ],
+  "open_questions": [],
+  "patterns": [],
+  "persons": [
+    {
+      "confidence": 1.0,
+      "description": "First actor",
+      "id": "pers_1",
+      "label": "Person 1",
+      "requirement_ids": [],
+      "source_fragment": "raa_a"
+    },
+    {
+      "confidence": 1.0,
+      "description": "Second actor",
+      "id": "pers_2",
+      "label": "Person 2",
+      "requirement_ids": [],
+      "source_fragment": "raa_a"
+    }
+  ],
+  "systems": [
+    {
+      "confidence": 1.0,
+      "containers": [
+        {
+          "components": [
+            {
+              "component_relationships": [
+                {
+                  "diagram_scope": "component",
+                  "interaction_type": "calls",
+                  "requirement_ids": [],
+                  "source_fragment": "raa_a",
+                  "source_id": "comp_1",
+                  "target_id": "comp_2",
+                  "technology": "gRPC"
+                }
+              ],
+              "confidence": 1.0,
+              "description": "Component inside container 1",
+              "id": "comp_1",
+              "label": "Component 1",
+              "parent_container_id": "cont_1",
+              "requirement_ids": [],
+              "source_fragment": "raa_a",
+              "technology": "Python"
+            },
+            {
+              "component_relationships": [],
+              "confidence": 1.0,
+              "description": "Component inside container 1",
+              "id": "comp_2",
+              "label": "Component 2",
+              "parent_container_id": "cont_1",
+              "requirement_ids": [],
+              "source_fragment": "raa_a",
+              "technology": "Python"
+            }
+          ],
+          "confidence": 1.0,
+          "container_relationships": [
+            {
+              "diagram_scope": "container",
+              "interaction_type": "sends messages to",
+              "requirement_ids": [],
+              "source_fragment": "raa_a",
+              "source_id": "cont_1",
+              "target_id": "cont_2",
+              "technology": "AMQP"
+            }
+          ],
+          "description": "Container inside system 1",
+          "id": "cont_1",
+          "label": "Container 1",
+          "parent_system_id": "sys_1",
+          "requirement_ids": [],
+          "source_fragment": "raa_a",
+          "technology": "Go"
+        },
+        {
+          "components": [
+            {
+              "component_relationships": [],
+              "confidence": 1.0,
+              "description": "Component inside container 2",
+              "id": "comp_3",
+              "label": "Component 3",
+              "parent_container_id": "cont_2",
+              "requirement_ids": [],
+              "source_fragment": "raa_a",
+              "technology": "Java"
+            }
+          ],
+          "confidence": 1.0,
+          "container_relationships": [],
+          "description": "Container inside system 1",
+          "id": "cont_2",
+          "label": "Container 2",
+          "parent_system_id": "sys_1",
+          "requirement_ids": [],
+          "source_fragment": "raa_a",
+          "technology": "Java"
+        }
+      ],
+      "context_relationships": [
+        {
+          "diagram_scope": "context",
+          "interaction_type": "uses",
+          "requirement_ids": [],
+          "source_fragment": "raa_a",
+          "source_id": "pers_1",
+          "target_id": "sys_1",
+          "technology": "HTTPS"
+        },
+        {
+          "diagram_scope": "context",
+          "interaction_type": "notifies",
+          "requirement_ids": [],
+          "source_fragment": "raa_a",
+          "source_id": "sys_1",
+          "target_id": "pers_2",
+          "technology": "SMTP"
+        },
+        {
+          "diagram_scope": "context",
+          "interaction_type": "delegates to",
+          "requirement_ids": [],
+          "source_fragment": "raa_a",
+          "source_id": "sys_1",
+          "target_id": "sys_2",
+          "technology": "gRPC"
+        },
+        {
+          "diagram_scope": "context",
+          "interaction_type": "calls",
+          "requirement_ids": [],
+          "source_fragment": "raa_a",
+          "source_id": "sys_2",
+          "target_id": "ext_sys_1",
+          "technology": "REST"
+        }
+      ],
+      "description": "First system under design",
+      "id": "sys_1",
+      "label": "System 1",
+      "requirement_ids": [],
+      "source_fragment": "raa_a"
+    },
+    {
+      "confidence": 1.0,
+      "containers": [
+        {
+          "components": [
+            {
+              "component_relationships": [],
+              "confidence": 1.0,
+              "description": "Component inside container 3",
+              "id": "comp_4",
+              "label": "Component 4",
+              "parent_container_id": "cont_3",
+              "requirement_ids": [],
+              "source_fragment": "raa_a",
+              "technology": "NodeJS"
+            }
+          ],
+          "confidence": 1.0,
+          "container_relationships": [],
+          "description": "Container inside system 2",
+          "id": "cont_3",
+          "label": "Container 3",
+          "parent_system_id": "sys_2",
+          "requirement_ids": [],
+          "source_fragment": "raa_a",
+          "technology": "NodeJS"
+        }
+      ],
+      "context_relationships": [],
+      "description": "Second system under design",
+      "id": "sys_2",
+      "label": "System 2",
+      "requirement_ids": [],
+      "source_fragment": "raa_a"
+    }
+  ]
+}

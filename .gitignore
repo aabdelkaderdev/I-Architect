@@ -22,6 +22,20 @@ arlo.egg-info/
 
 # Virtual environment
 .venv/
+venv/
+
+# Environment and secrets
+.env*
+*.log
+
+# Distribution
+dist/
+build/
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db
 
 # AI / Agent tooling
 .claude/

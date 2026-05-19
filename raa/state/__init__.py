@@ -16,8 +16,10 @@ from raa.state.types import (
     Batch,
     ConfidenceRecord,
     DiagramManifestEntry,
+    FailureRegisterEntry,
     IncoherentBatchRecord,
     OpenQuestion,
+    SortingMetadata,
 )
 
 __all__ = [
@@ -33,9 +35,11 @@ __all__ = [
     "Batch",
     "ConfidenceRecord",
     "DiagramManifestEntry",
+    "FailureRegisterEntry",
     "IncoherentBatchRecord",
     "OpenQuestion",
     "RAAState",
+    "SortingMetadata",
     "merge_batch_outputs",
     "merge_best_batch_output",
 ]

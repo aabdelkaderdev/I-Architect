@@ -415,9 +415,185 @@ def test_sqlite_connections_use_wal():
                         assert mode.upper() == "WAL", f"{db_path} journal_mode={mode}, expected WAL"
 
 
+def test_corrupt_asr_db_raises_blocking_error():
+    """T006: Corrupt ASR DB raises blocking RuntimeError to re-run ARLO."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        asr_db = tmp_path / "asr_embeddings.db"
+        non_asr_db = tmp_path / "non_asr_embeddings.db"
+        
+        # Write corrupt bytes to asr_db
+        with open(asr_db, "wb") as f:
+            f.write(b"garbage bytes that are not a sqlite db")
+        _make_embedding_db(non_asr_db)
+
+        fake_model = FakeEmbeddingModel()
+        with patch("raa.nodes.preparation._get_embedding_model", return_value=fake_model):
+            from raa.nodes.preparation import prepare_embeddings
+            with patch("raa.nodes.preparation._asr_db_path", return_value=asr_db):
+                with patch("raa.nodes.preparation._non_asr_db_path", return_value=non_asr_db):
+                    state = _make_raa_state(asrs=SAMPLE_ASRS)
+                    try:
+                        prepare_embeddings(state)
+                        raise AssertionError("Expected RuntimeError due to corrupt ASR DB, but none was raised")
+                    except RuntimeError as e:
+                        assert "re-run ARLO" in str(e)
+
+
+def test_corrupt_non_asr_db_rebuilds_automatically():
+    """T007: Corrupt non-ASR DB triggers automatic rebuild with warning log."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        asr_db = tmp_path / "asr_embeddings.db"
+        non_asr_db = tmp_path / "non_asr_embeddings.db"
+        _make_embedding_db(asr_db)
+        
+        # Populate ASR DB
+        conn = sqlite3.connect(str(asr_db))
+        for asr in SAMPLE_ASRS:
+            _insert_embedding(conn, asr["id"], asr["text"])
+        conn.commit()
+        conn.close()
+
+        # Write corrupt bytes to non_asr_db
+        with open(non_asr_db, "wb") as f:
+            f.write(b"garbage bytes that are not a sqlite db")
+
+        fake_model = FakeEmbeddingModel()
+        with patch("raa.nodes.preparation._get_embedding_model", return_value=fake_model):
+            from raa.nodes.preparation import prepare_embeddings
+            with patch("raa.nodes.preparation._asr_db_path", return_value=asr_db):
+                with patch("raa.nodes.preparation._non_asr_db_path", return_value=non_asr_db):
+                    state = _make_raa_state(asrs=SAMPLE_ASRS, non_asr=SAMPLE_NON_ASRS)
+                    
+                    with patch("raa.nodes.preparation.logger.warning") as mock_warn:
+                        result = prepare_embeddings(state)
+                        assert result.get("embeddings_ready") is True
+                        
+                        # Verify DB is rebuilt
+                        conn2 = sqlite3.connect(str(non_asr_db))
+                        row = conn2.execute("SELECT count(*) FROM embeddings").fetchone()
+                        conn2.close()
+                        assert row[0] == len(SAMPLE_NON_ASRS)
+                        
+                        # Verify warning log was called with "corrupt" or "Rebuilding"
+                        warning_called = False
+                        for call in mock_warn.call_args_list:
+                            msg = call[0][0]
+                            if "corrupt" in msg or "Rebuilding" in msg:
+                                warning_called = True
+                                break
+                        assert warning_called, "Warning log about corruption was not emitted"
+
+
+def test_embeddings_ready_true_bypasses_all_checks():
+    """T008: embeddings_ready=True bypasses all database operations."""
+    state = _make_raa_state(asrs=SAMPLE_ASRS)
+    state["embeddings_ready"] = True
+
+    # Patch the verification/persistence functions to raise error if called
+    with patch("raa.nodes.preparation._verify_asr_embeddings", side_effect=AssertionError("Should not touch asr DB")):
+        with patch("raa.nodes.preparation._persist_non_asr_embeddings", side_effect=AssertionError("Should not touch non-ASR DB")):
+            from raa.nodes.preparation import prepare_embeddings
+            result = prepare_embeddings(state)
+            assert result == {}
+
+
+def test_stale_hash_emits_warning_log():
+    """T012: Stale hash emits a WARNING log and recomputes the embedding."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        asr_db = tmp_path / "asr_embeddings.db"
+        non_asr_db = tmp_path / "non_asr_embeddings.db"
+        _make_embedding_db(asr_db)
+        _make_embedding_db(non_asr_db)
+
+        # Pre-populate non_asr_db with a stale hash for requirement ID 10
+        conn = sqlite3.connect(str(non_asr_db))
+        stale_hash = "0000000000000000000000000000000000000000000000000000000000000000"
+        stale_blob = _serialize_embedding([0.0] * _EMBEDDING_DIM)
+        conn.execute(
+            "INSERT INTO embeddings (requirement_id, embedding, text_hash, model_name) VALUES (?, ?, ?, ?)",
+            (10, stale_blob, stale_hash, _MODEL_NAME),
+        )
+        conn.commit()
+        conn.close()
+
+        fake_model = FakeEmbeddingModel()
+        with patch("raa.nodes.preparation._get_embedding_model", return_value=fake_model):
+            from raa.nodes.preparation import prepare_embeddings
+            with patch("raa.nodes.preparation._asr_db_path", return_value=asr_db):
+                with patch("raa.nodes.preparation._non_asr_db_path", return_value=non_asr_db):
+                    state = _make_raa_state(non_asr=SAMPLE_NON_ASRS)
+                    
+                    with patch("raa.nodes.preparation.logger.warning") as mock_warn:
+                        result = prepare_embeddings(state)
+                        assert result.get("embeddings_ready") is True
+                        
+                        warning_called = False
+                        for call in mock_warn.call_args_list:
+                            msg = call[0][0]
+                            if "Stale embedding" in msg:
+                                warning_called = True
+                                break
+                        assert warning_called, "Warning log about stale embedding was not emitted"
+
+
+def test_model_name_consistency():
+    """T010: Verify prepare_embeddings raises ValueError if model_name is mismatched."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        asr_db = tmp_path / "asr_embeddings.db"
+        non_asr_db = tmp_path / "non_asr_embeddings.db"
+        _make_embedding_db(asr_db)
+        _make_embedding_db(non_asr_db)
+
+        # 1. First, populate both with the correct model name
+        conn_asr = sqlite3.connect(str(asr_db))
+        vec = [0.1] * _EMBEDDING_DIM
+        conn_asr.execute(
+            "INSERT INTO embeddings (requirement_id, embedding, text_hash, model_name) VALUES (?, ?, ?, ?)",
+            (1, _serialize_embedding(vec), _hash_text(SAMPLE_ASRS[0]["text"]), _MODEL_NAME),
+        )
+        conn_asr.commit()
+        conn_asr.close()
+
+        fake_model = FakeEmbeddingModel()
+        with patch("raa.nodes.preparation._get_embedding_model", return_value=fake_model):
+            from raa.nodes.preparation import prepare_embeddings
+            with patch("raa.nodes.preparation._asr_db_path", return_value=asr_db):
+                with patch("raa.nodes.preparation._non_asr_db_path", return_value=non_asr_db):
+                    # Should pass (does not raise ValueError) since model name is consistent
+                    state = _make_raa_state(asrs=[SAMPLE_ASRS[0]])
+                    result = prepare_embeddings(state)
+                    assert result.get("embeddings_ready") is True
+
+        # 2. Now clear and populate with mismatched model name
+        # We will reuse the same paths but write a different model name to ASR DB
+        asr_db.unlink(missing_ok=True)
+        _make_embedding_db(asr_db)
+        conn_asr = sqlite3.connect(str(asr_db))
+        conn_asr.execute(
+            "INSERT INTO embeddings (requirement_id, embedding, text_hash, model_name) VALUES (?, ?, ?, ?)",
+            (1, _serialize_embedding(vec), _hash_text(SAMPLE_ASRS[0]["text"]), "mismatched-model-name"),
+        )
+        conn_asr.commit()
+        conn_asr.close()
+
+        with patch("raa.nodes.preparation._get_embedding_model", return_value=fake_model):
+            with patch("raa.nodes.preparation._asr_db_path", return_value=asr_db):
+                with patch("raa.nodes.preparation._non_asr_db_path", return_value=non_asr_db):
+                    import pytest
+                    state = _make_raa_state(asrs=[SAMPLE_ASRS[0]])
+                    with pytest.raises(ValueError) as excinfo:
+                        prepare_embeddings(state)
+                    assert "uses model 'mismatched-model-name'" in str(excinfo.value)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     ok = _run_tests()
     sys.exit(0 if ok else 1)
+
