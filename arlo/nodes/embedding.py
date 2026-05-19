@@ -11,7 +11,9 @@ Install:  pip install fastembed
 """
 from __future__ import annotations
 
+import json
 import logging
+import sqlite3
 from pathlib import Path
 
 from fastembed import TextEmbedding
@@ -22,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 _MODEL_NAME = "mixedbread-ai/mxbai-embed-large-v1"
 _CACHE_DIR = Path(__file__).parent.parent / "models"  # → arlo/models/
+_PROJECT_ROOT = Path(__file__).parent.parent.parent  # → project root
+_EMBEDDINGS_DIR = _PROJECT_ROOT / "embeddings"
+_DB_PATH = _EMBEDDINGS_DIR / "asr_embeddings.db"
 
 # Module-level singleton — initialized once on first call.
 _embedding_model: TextEmbedding | None = None
@@ -61,4 +66,29 @@ def generate_embeddings(state: ARLOState) -> dict:
     embeddings = [vec.tolist() for vec in model.embed(texts)]
 
     logger.info("Generated %d embeddings (dim=%d).", len(embeddings), len(embeddings[0]))
+
+    # Persist ASR embeddings to SQLite for RAA consumption
+    _EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(_DB_PATH))
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS asr_embeddings ("
+        "  requirement_id TEXT PRIMARY KEY,"
+        "  embedding_json TEXT NOT NULL"
+        ")"
+    )
+    persisted = 0
+    for asr, embedding in zip(asrs, embeddings):
+        requirement_id = asr.get("id")
+        if requirement_id:
+            conn.execute(
+                "INSERT OR REPLACE INTO asr_embeddings (requirement_id, embedding_json) "
+                "VALUES (?, ?)",
+                (requirement_id, json.dumps(embedding)),
+            )
+            persisted += 1
+    conn.commit()
+    conn.close()
+
+    logger.info("Persisted %d ASR embeddings to %s", persisted, _DB_PATH)
+
     return {"embeddings": embeddings}

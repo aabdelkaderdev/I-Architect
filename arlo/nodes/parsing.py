@@ -139,7 +139,7 @@ def parse_requirements(
     # Separate architecturally significant vs non-ASR requirements
     asrs = [r for r in all_parsed if r["is_architecturally_significant"]]
     non_asr = [
-        r["id"] for r in all_parsed
+        r for r in all_parsed
         if not r["is_architecturally_significant"]
     ]
 

@@ -65,7 +65,7 @@ class ARLOOutput(TypedDict):
     concerns: list[dict]
     stats: dict
     asrs: list[dict]
-    non_asr: list[str]                        # Non-ASR requirement IDs
+    non_asr: list[dict]                        # Non-ASR requirement dictionaries
     condition_groups: list[dict]              # Condition groups for RAA
     quality_weights: dict[str, int]
 
@@ -78,7 +78,7 @@ class ARLOState(ARLOInput, ARLOOutput):
 
     # Stage 1: Parsing
     asrs: list[dict]
-    non_asr: list[str]                            # Non-ASR requirement IDs
+    non_asr: list[dict]                            # Non-ASR requirement dictionaries
     parsing_stats: dict                           # {total, asr_count}
 
     # Stage 2: Embedding & Clustering
