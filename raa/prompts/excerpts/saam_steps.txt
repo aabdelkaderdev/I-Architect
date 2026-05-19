@@ -1,0 +1,1 @@
+Apply SAAM in order: (1) canonical partitioning, (2) map requirements to structures, (3) choose quality attributes, (4) define evaluation scenarios, (5) evaluate structures against scenarios.

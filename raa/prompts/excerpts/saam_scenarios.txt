@@ -1,0 +1,1 @@
+Define evaluation scenarios per quality attribute. Each scenario describes a concrete usage context. Weight scenarios by ARLO quality weights. Judge scores fragments by scenario coverage.

@@ -1,0 +1,1 @@
+Every element needs a type label, a short description, and clearly labelled directed relationships. Use canonical IDs (lowercase, snake_case). Technology annotation required when determinable.

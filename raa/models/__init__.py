@@ -1,0 +1,1 @@
+"""RAA data model structures."""

@@ -1,0 +1,1 @@
+Containers and components must specify technology stack when determinable from requirements. Leave as null when technology is genuinely ambiguous rather than guessing.

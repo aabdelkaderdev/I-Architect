@@ -1,0 +1,1 @@
+C4 levels: Context (system+actors), Container (deployable units), Component (internal building blocks). Each level restricts which element types may appear and which relationships are valid.
