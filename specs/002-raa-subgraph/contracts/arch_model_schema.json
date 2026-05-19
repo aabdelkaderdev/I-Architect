@@ -1,0 +1,222 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C4ArchitectureModel",
+  "description": "JSON schema for the C4-compliant output architecture model produced by the RAA pipeline.",
+  "type": "object",
+  "required": ["systems", "persons", "external_systems", "patterns", "diagram_manifest", "confidence_metadata", "open_questions"],
+  "properties": {
+    "systems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ArchSystem"
+      }
+    },
+    "persons": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ArchPerson"
+      }
+    },
+    "external_systems": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ArchExternalSystem"
+      }
+    },
+    "patterns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ArchPattern"
+      }
+    },
+    "diagram_manifest": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/DiagramManifestEntry"
+      }
+    },
+    "confidence_metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/ConfidenceRecord"
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/OpenQuestion"
+      }
+    }
+  },
+  "definitions": {
+    "ArchSystem": {
+      "type": "object",
+      "required": ["id", "label", "description", "requirement_ids", "source_fragment", "confidence", "context_relationships", "containers"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "requirement_ids": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "source_fragment": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] },
+        "context_relationships": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ArchRelationship" }
+        },
+        "containers": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ArchContainer" }
+        }
+      }
+    },
+    "ArchContainer": {
+      "type": "object",
+      "required": ["id", "label", "description", "technology", "requirement_ids", "source_fragment", "confidence", "parent_system_id", "container_relationships", "components"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "technology": { "type": ["string", "null"] },
+        "requirement_ids": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "source_fragment": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] },
+        "parent_system_id": { "type": "string" },
+        "container_relationships": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ArchRelationship" }
+        },
+        "components": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ArchComponent" }
+        }
+      }
+    },
+    "ArchComponent": {
+      "type": "object",
+      "required": ["id", "label", "description", "technology", "requirement_ids", "source_fragment", "confidence", "parent_container_id", "component_relationships"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "technology": { "type": ["string", "null"] },
+        "requirement_ids": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "source_fragment": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] },
+        "parent_container_id": { "type": "string" },
+        "component_relationships": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/ArchRelationship" }
+        }
+      }
+    },
+    "ArchPerson": {
+      "type": "object",
+      "required": ["id", "label", "description", "requirement_ids", "source_fragment", "confidence"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "requirement_ids": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "source_fragment": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] }
+      }
+    },
+    "ArchExternalSystem": {
+      "type": "object",
+      "required": ["id", "label", "description", "technology", "requirement_ids", "source_fragment", "confidence"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "technology": { "type": ["string", "null"] },
+        "requirement_ids": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "source_fragment": { "type": ["string", "null"] },
+        "confidence": { "type": ["number", "null"] }
+      }
+    },
+    "ArchRelationship": {
+      "type": "object",
+      "required": ["source_id", "target_id", "interaction_type", "technology", "requirement_ids", "source_fragment", "diagram_scope"],
+      "properties": {
+        "source_id": { "type": "string" },
+        "target_id": { "type": "string" },
+        "interaction_type": { "type": "string" },
+        "technology": { "type": ["string", "null"] },
+        "requirement_ids": {
+          "type": "array",
+          "items": { "type": "integer" }
+        },
+        "source_fragment": { "type": ["string", "null"] },
+        "diagram_scope": {
+          "type": "string",
+          "enum": ["context", "container", "component"]
+        }
+      }
+    },
+    "ArchPattern": {
+      "type": "object",
+      "required": ["name", "rationale", "quality_attributes"],
+      "properties": {
+        "name": { "type": "string" },
+        "rationale": { "type": "string" },
+        "quality_attributes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "DiagramManifestEntry": {
+      "type": "object",
+      "required": ["diagram_id", "diagram_type", "focus_entity_id", "label"],
+      "properties": {
+        "diagram_id": { "type": "string" },
+        "diagram_type": {
+          "type": "string",
+          "enum": ["context", "container", "component"]
+        },
+        "focus_entity_id": { "type": "string" },
+        "label": { "type": "string" }
+      }
+    },
+    "ConfidenceRecord": {
+      "type": "object",
+      "required": ["reduced_confidence", "source_batch", "saam_score"],
+      "properties": {
+        "reduced_confidence": { "type": "boolean" },
+        "source_batch": { "type": "integer" },
+        "saam_score": { "type": "number" }
+      }
+    },
+    "OpenQuestion": {
+      "type": "object",
+      "required": ["entity_id", "type", "description", "scenario_ids"],
+      "properties": {
+        "entity_id": { "type": ["string", "null"] },
+        "type": {
+          "type": "string",
+          "enum": ["change_risk", "high_coupling", "contention", "tie", "coverage_gap", "hierarchy_conflict", "scope_conflict"]
+        },
+        "description": { "type": "string" },
+        "scenario_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
