@@ -57,6 +57,20 @@ class C4Relationship(BaseModel):
     metadata: dict = Field(default_factory=dict)
 
 
+class SAAMScenario(BaseModel):
+    """A SAAM scenario evaluated against a candidate architecture fragment.
+
+    Each scenario describes a stimulus/context/response, maps to quality
+    attributes, and records a satisfaction level.
+    """
+    id: str
+    description: str
+    quality_attributes: list[str] = Field(default_factory=list)
+    satisfaction: str = "unknown"  # "satisfied", "partial", "unsatisfied", "unknown"
+    requirement_ids: list[str] = Field(default_factory=list)
+    metadata: dict = Field(default_factory=dict)
+
+
 class ArchFragment(BaseModel):
     """Output from a single strategy subgraph (RAA-A, RAA-B, or RAA-C).
 
@@ -67,4 +81,21 @@ class ArchFragment(BaseModel):
     relationships: list[C4Relationship] = Field(default_factory=list)
     cross_cutting_candidates: list[str] = Field(default_factory=list)
     assumption_flags: list[str] = Field(default_factory=list)
+    saam_scenarios: list[SAAMScenario] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
+
+
+class FragmentScore(BaseModel):
+    """Deterministic score for an ArchFragment produced by a strategy subgraph.
+
+    Records enough metadata for auditable tie-breaking and later merge work.
+    """
+    batch_id: str
+    batch_index: int
+    strategy: str
+    thread_id: str
+    raw_score: float
+    multiplier: float
+    final_score: float
+    scenario_contributions: list[dict] = Field(default_factory=list)
+    is_primary: bool = False

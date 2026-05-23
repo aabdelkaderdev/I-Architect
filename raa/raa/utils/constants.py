@@ -31,3 +31,18 @@ EMBEDDING_CACHE_DIR = str(Path(__file__).resolve().parent.parent.parent.parent /
 
 # ── Pattern keywords ──────────────────────────────────────────────────────
 INFRA_KEYWORDS = ["all", "every", "always", "any"]
+
+# ── SAAM scoring multipliers ───────────────────────────────────────────────
+SAAM_REDUCED_CONFIDENCE_MULTIPLIER = 0.5
+
+# ── SAAM satisfaction factors ──────────────────────────────────────────────
+SAAM_SATISFACTION_FACTORS: dict[str, float] = {
+    "satisfied": 1.0,
+    "partial": 0.5,
+    "partially_satisfied": 0.5,
+    "unsatisfied": 0.0,
+    "unknown": 0.0,
+}
+
+# ── Strategy tie-break order ───────────────────────────────────────────────
+SAAM_STRATEGY_ORDER = ("raa_a", "raa_b", "raa_c")

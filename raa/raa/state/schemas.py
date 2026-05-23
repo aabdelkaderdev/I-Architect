@@ -85,3 +85,9 @@ class RAAState(RAAInput, RAAOutput):
     # Phase 7-8: Review and finalize
     human_review_payload: NotRequired[dict]
     human_answers: NotRequired[dict]
+
+    # Judge scoring channel (Story 2.3)
+    # Maps batch_cursor → ranking result dict. Not an append reducer because
+    # each batch is scored exactly once by the Judge node; the node reads the
+    # current cursor, scores matching records, and writes the full dict.
+    judge_rankings: NotRequired[dict[int, dict]]
