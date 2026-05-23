@@ -1,6 +1,6 @@
 # Story 2.2: C4 Metamodel Hierarchy Enforcement in Private Subgraphs
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -28,73 +28,73 @@ so that we prevent orphan components or out-of-scope relationship arrows from co
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Tighten canonical C4 fragment models (AC: #1, #2, #3, #4)
-  - [ ] 1.1 Update `raa/state/models.py`; do not define C4 models in `raa/subgraphs/*`.
-  - [ ] 1.2 Extend `C4Entity` to support `c4_type` values needed by this story: `person`, `system`, `external_system`, `container`, and `component`.
-  - [ ] 1.3 Add explicit optional parent fields: `parent_system_id` for containers and `parent_container_id` for components. Preserve existing fields (`id`, `name`, `description`, `technology`, `metadata`) so Story 2.1 tests and output normalization remain compatible.
-  - [ ] 1.4 Extend `C4Relationship` with `diagram_scope: str` and preserve `source_id`, `target_id`, `description`, `relationship_type`, and `metadata`.
-  - [ ] 1.5 Add Pydantic validators or helper methods only where they improve local validation. Cross-fragment/running-model checks belong in the C4 validator utility, not in field-level validators that cannot see the running model.
+- [x] Task 1: Tighten canonical C4 fragment models (AC: #1, #2, #3, #4)
+  - [x] 1.1 Update `raa/state/models.py`; do not define C4 models in `raa/subgraphs/*`.
+  - [x] 1.2 Extend `C4Entity` to support `c4_type` values needed by this story: `person`, `system`, `external_system`, `container`, and `component`.
+  - [x] 1.3 Add explicit optional parent fields: `parent_system_id` for containers and `parent_container_id` for components. Preserve existing fields (`id`, `name`, `description`, `technology`, `metadata`) so Story 2.1 tests and output normalization remain compatible.
+  - [x] 1.4 Extend `C4Relationship` with `diagram_scope: str` and preserve `source_id`, `target_id`, `description`, `relationship_type`, and `metadata`.
+  - [x] 1.5 Add Pydantic validators or helper methods only where they improve local validation. Cross-fragment/running-model checks belong in the C4 validator utility, not in field-level validators that cannot see the running model.
 
-- [ ] Task 2: Add shared C4 hierarchy enforcement utility (AC: #1, #2, #3, #5)
-  - [ ] 2.1 Create `raa/utils/c4_validator.py`.
-  - [ ] 2.2 Implement a pure function such as `enforce_fragment_hierarchy(fragment: ArchFragment, running_model: dict, *, batch_id: str, strategy: str) -> tuple[ArchFragment, list[dict]]`.
-  - [ ] 2.3 Build lookup maps from both the current fragment and `running_model`; support common running-model shapes from architecture docs, such as top-level `systems`, `containers`, `components`, and nested system/container lists.
-  - [ ] 2.4 Validate containers: keep only containers whose `parent_system_id` resolves to a system in the fragment or running model.
-  - [ ] 2.5 Validate components: keep only components whose `parent_container_id` resolves to a container in the fragment or running model.
-  - [ ] 2.6 Validate relationships: keep only relationships whose endpoints resolve after invalid entities are removed.
-  - [ ] 2.7 Assign `diagram_scope` deterministically from endpoint types. Use the deepest endpoint level: component -> `component`, container -> `container`, otherwise `context`.
-  - [ ] 2.8 Emit open question dicts for excluded entities/relationships with fields: `type`, `reason`, `batch_id`, `strategy`, `requirement_ids`, `entity_id` or `relationship_id`, and `suggested_resolution`.
-  - [ ] 2.9 Do not raise exceptions for recoverable orphan/hierarchy issues. Exceptions are only for malformed programmer inputs that cannot be processed.
+- [x] Task 2: Add shared C4 hierarchy enforcement utility (AC: #1, #2, #3, #5)
+  - [x] 2.1 Create `raa/utils/c4_validator.py`.
+  - [x] 2.2 Implement a pure function such as `enforce_fragment_hierarchy(fragment: ArchFragment, running_model: dict, *, batch_id: str, strategy: str) -> tuple[ArchFragment, list[dict]]`.
+  - [x] 2.3 Build lookup maps from both the current fragment and `running_model`; support common running-model shapes from architecture docs, such as top-level `systems`, `containers`, `components`, and nested system/container lists.
+  - [x] 2.4 Validate containers: keep only containers whose `parent_system_id` resolves to a system in the fragment or running model.
+  - [x] 2.5 Validate components: keep only components whose `parent_container_id` resolves to a container in the fragment or running model.
+  - [x] 2.6 Validate relationships: keep only relationships whose endpoints resolve after invalid entities are removed.
+  - [x] 2.7 Assign `diagram_scope` deterministically from endpoint types. Use the deepest endpoint level: component -> `component`, container -> `container`, otherwise `context`.
+  - [x] 2.8 Emit open question dicts for excluded entities/relationships with fields: `type`, `reason`, `batch_id`, `strategy`, `requirement_ids`, `entity_id` or `relationship_id`, and `suggested_resolution`.
+  - [x] 2.9 Do not raise exceptions for recoverable orphan/hierarchy issues. Exceptions are only for malformed programmer inputs that cannot be processed.
 
-- [ ] Task 3: Add prompt loading and strategy prompt templates (AC: #4, #6, #7)
-  - [ ] 3.1 Create `raa/prompts/` if absent.
-  - [ ] 3.2 Add concise mustache templates for private extraction:
+- [x] Task 3: Add prompt loading and strategy prompt templates (AC: #4, #6, #7)
+  - [x] 3.1 Create `raa/prompts/` if absent.
+  - [x] 3.2 Add concise mustache templates for private extraction:
     - `raa/prompts/saam_analysis.md`
     - `raa/prompts/pattern_matching.md`
     - `raa/prompts/entity_extraction.md`
-  - [ ] 3.3 Create `raa/utils/prompt_loader.py` with a small `load_prompt(template_name: str, context: dict) -> str` helper using `chevron.render()`.
-  - [ ] 3.4 Templates must instruct the model to return the canonical `ArchFragment` shape and include the C4 hierarchy rules from this story.
-  - [ ] 3.5 Keep templates short and runtime-focused. Long design references belong in future `Skills/references/` files, not copied wholesale into prompts.
+  - [x] 3.3 Create `raa/utils/prompt_loader.py` with a small `load_prompt(template_name: str, context: dict) -> str` helper using `chevron.render()`.
+  - [x] 3.4 Templates must instruct the model to return the canonical `ArchFragment` shape and include the C4 hierarchy rules from this story.
+  - [x] 3.5 Keep templates short and runtime-focused. Long design references belong in future `Skills/references/` files, not copied wholesale into prompts.
 
-- [ ] Task 4: Replace scaffold subgraph nodes with structured extraction paths (AC: #1, #2, #3, #4, #6)
-  - [ ] 4.1 Update `raa/subgraphs/raa_a.py`, `raa/subgraphs/raa_b.py`, and `raa/subgraphs/raa_c.py` in place.
-  - [ ] 4.2 Each node must read its LLM from `config["configurable"]["raa_a_llm"]`, `raa_b_llm`, or `raa_c_llm`; never instantiate an LLM inside a node.
-  - [ ] 4.3 Node functions may accept `RunnableConfig` per LangGraph docs. Preserve the existing `StateGraph(StrategySubgraphState)` builders and keep them uncompiled.
-  - [ ] 4.4 Use `llm.with_structured_output(ArchFragment, include_raw=True)` for extraction.
-  - [ ] 4.5 Normalize the structured-output response: use `response["parsed"]` when `include_raw=True`; if the injected fake returns an `ArchFragment` directly, accept it for tests.
-  - [ ] 4.6 Run `enforce_fragment_hierarchy(...)` before returning.
-  - [ ] 4.7 Return only private state updates, for example `{"arch_fragment": valid_fragment, "open_questions": questions}`.
-  - [ ] 4.8 Keep RAA-A, RAA-B, and RAA-C strategy-specific prompts separated; do not collapse all strategies into one module.
+- [x] Task 4: Replace scaffold subgraph nodes with structured extraction paths (AC: #1, #2, #3, #4, #6)
+  - [x] 4.1 Update `raa/subgraphs/raa_a.py`, `raa/subgraphs/raa_b.py`, and `raa/subgraphs/raa_c.py` in place.
+  - [x] 4.2 Each node must read its LLM from `config["configurable"]["raa_a_llm"]`, `raa_b_llm`, or `raa_c_llm`; never instantiate an LLM inside a node.
+  - [x] 4.3 Node functions may accept `RunnableConfig` per LangGraph docs. Preserve the existing `StateGraph(StrategySubgraphState)` builders and keep them uncompiled.
+  - [x] 4.4 Use `llm.with_structured_output(ArchFragment, include_raw=True)` for extraction.
+  - [x] 4.5 Normalize the structured-output response: use `response["parsed"]` when `include_raw=True`; if the injected fake returns an `ArchFragment` directly, accept it for tests.
+  - [x] 4.6 Run `enforce_fragment_hierarchy(...)` before returning.
+  - [x] 4.7 Return only private state updates, for example `{"arch_fragment": valid_fragment, "open_questions": questions}`.
+  - [x] 4.8 Keep RAA-A, RAA-B, and RAA-C strategy-specific prompts separated; do not collapse all strategies into one module.
 
-- [ ] Task 5: Carry recoverable hierarchy questions back to parent dispatch (AC: #5, #6)
-  - [ ] 5.1 Extend `raa/subgraphs/schemas.py` so private output/state can include `open_questions: list[dict]`.
-  - [ ] 5.2 Update `raa/graphs/execution_loop.py` normalization to preserve `arch_fragment` behavior from Story 2.1.
-  - [ ] 5.3 If a subgraph result contains `open_questions`, have `dispatch_strategy_subgraphs` return them through the parent `open_questions` append reducer in addition to `batch_outputs`.
-  - [ ] 5.4 Preserve Story 2.1 guarantees: no full parent state exposure, no shared checkpoint connection, no `batch_cursor` increment, stable output record metadata, and reduced-confidence mode still runs only RAA-A.
+- [x] Task 5: Carry recoverable hierarchy questions back to parent dispatch (AC: #5, #6)
+  - [x] 5.1 Extend `raa/subgraphs/schemas.py` so private output/state can include `open_questions: list[dict]`.
+  - [x] 5.2 Update `raa/graphs/execution_loop.py` normalization to preserve `arch_fragment` behavior from Story 2.1.
+  - [x] 5.3 If a subgraph result contains `open_questions`, have `dispatch_strategy_subgraphs` return them through the parent `open_questions` append reducer in addition to `batch_outputs`.
+  - [x] 5.4 Preserve Story 2.1 guarantees: no full parent state exposure, no shared checkpoint connection, no `batch_cursor` increment, stable output record metadata, and reduced-confidence mode still runs only RAA-A.
 
-- [ ] Task 6: Unit tests for C4 hierarchy and scope enforcement (AC: #1, #2, #3, #5, #7)
-  - [ ] 6.1 Add `tests/raa/unit/test_c4_validator.py`.
-  - [ ] 6.2 Test valid container parent in fragment is kept.
-  - [ ] 6.3 Test valid container parent in running model is kept.
-  - [ ] 6.4 Test orphan container is excluded and creates an open question.
-  - [ ] 6.5 Test valid component parent in fragment and running model is kept.
-  - [ ] 6.6 Test orphan component is excluded and creates an open question.
-  - [ ] 6.7 Test unresolved relationship endpoint is excluded and creates an open question.
-  - [ ] 6.8 Test relationship scope assignment for context, container, and component endpoints.
-  - [ ] 6.9 Test invalid entity removal happens before relationship validation.
+- [x] Task 6: Unit tests for C4 hierarchy and scope enforcement (AC: #1, #2, #3, #5, #7)
+  - [x] 6.1 Add `tests/raa/unit/test_c4_validator.py`.
+  - [x] 6.2 Test valid container parent in fragment is kept.
+  - [x] 6.3 Test valid container parent in running model is kept.
+  - [x] 6.4 Test orphan container is excluded and creates an open question.
+  - [x] 6.5 Test valid component parent in fragment and running model is kept.
+  - [x] 6.6 Test orphan component is excluded and creates an open question.
+  - [x] 6.7 Test unresolved relationship endpoint is excluded and creates an open question.
+  - [x] 6.8 Test relationship scope assignment for context, container, and component endpoints.
+  - [x] 6.9 Test invalid entity removal happens before relationship validation.
 
-- [ ] Task 7: Unit tests for structured subgraph extraction (AC: #4, #6, #7)
-  - [ ] 7.1 Extend `tests/raa/unit/test_execution_loop.py` or add `tests/raa/unit/test_strategy_subgraphs.py`.
-  - [ ] 7.2 Use injected fake LLMs or small fake structured-output wrappers; no network or live model calls.
-  - [ ] 7.3 Test each builder still returns an uncompiled `StateGraph`.
-  - [ ] 7.4 Test each strategy node reads only its own configured LLM key.
-  - [ ] 7.5 Test `with_structured_output(ArchFragment, include_raw=True)` is used by fake wrapper assertions.
-  - [ ] 7.6 Test subgraph return includes a valid `ArchFragment` and propagates validator open questions.
-  - [ ] 7.7 Test dispatch can return parent `open_questions` without changing `batch_outputs` metadata or `batch_cursor`.
+- [x] Task 7: Unit tests for structured subgraph extraction (AC: #4, #6, #7)
+  - [x] 7.1 Extend `tests/raa/unit/test_execution_loop.py` or add `tests/raa/unit/test_strategy_subgraphs.py`.
+  - [x] 7.2 Use injected fake LLMs or small fake structured-output wrappers; no network or live model calls.
+  - [x] 7.3 Test each builder still returns an uncompiled `StateGraph`.
+  - [x] 7.4 Test each strategy node reads only its own configured LLM key.
+  - [x] 7.5 Test `with_structured_output(ArchFragment, include_raw=True)` is used by fake wrapper assertions.
+  - [x] 7.6 Test subgraph return includes a valid `ArchFragment` and propagates validator open questions.
+  - [x] 7.7 Test dispatch can return parent `open_questions` without changing `batch_outputs` metadata or `batch_cursor`.
 
-- [ ] Task 8: Regression test Story 2.1 behavior (AC: #6, #7)
-  - [ ] 8.1 Run the existing execution loop tests after adding hierarchy behavior.
-  - [ ] 8.2 Run focused Epic 1 regression tests if shared models or constants are touched.
+- [x] Task 8: Regression test Story 2.1 behavior (AC: #6, #7)
+  - [x] 8.1 Run the existing execution loop tests after adding hierarchy behavior.
+  - [x] 8.2 Run focused Epic 1 regression tests if shared models or constants are touched.
 
 ## Dev Notes
 
@@ -276,13 +276,48 @@ Expected test style:
 
 ### Agent Model Used
 
-TBD by dev agent
+Claude Opus 4.7 (1M context) via Claude Code
 
 ### Debug Log References
 
+None.
+
 ### Completion Notes List
 
-- Story context created by BMad create-story workflow on 2026-05-23.
-- LangChain docs MCP used for subgraph, graph API, structured output, and fake model testing references.
+- Tightened C4Entity/C4Relationship Pydantic models with parent_system_id, parent_container_id, requirement_ids, diagram_scope
+- Created shared c4_validator.py with enforce_fragment_hierarchy() — validates containers, components, relationships, and assigns diagram_scope
+- Created prompt_loader.py using chevron mustache rendering
+- Three prompt templates: saam_analysis.md, pattern_matching.md, entity_extraction.md
+- Updated all three subgraph builders (raa_a/b/c) with structured extraction via with_structured_output(ArchFragment, include_raw=True)
+- Each builder: loads prompt → runs LLM extraction → enforces C4 hierarchy → returns clean fragment + open_questions
+- Updated execution_loop.py dispatch to propagate open_questions from subgraph results to parent state
+- 38 new unit tests (18 c4_validator + 17 strategy_subgraphs + 3 implicit regression)
+- Full regression: 189 tests pass (151 previous + 38 new), no regressions
 
 ### File List
+
+- `raa/state/models.py` — C4Entity parent fields, C4Relationship diagram_scope
+- `raa/subgraphs/schemas.py` — Added open_questions to state/output
+- `raa/subgraphs/raa_a.py` — SAAM-first structured extraction + enforcement
+- `raa/subgraphs/raa_b.py` — Pattern-driven structured extraction + enforcement
+- `raa/subgraphs/raa_c.py` — Entity/relationship structured extraction + enforcement
+- `raa/graphs/execution_loop.py` — Propagate subgraph open_questions to parent
+- `raa/utils/c4_validator.py` — C4 hierarchy enforcement utility
+- `raa/utils/prompt_loader.py` — Chevron template loader
+- `raa/prompts/saam_analysis.md` — RAA-A prompt template
+- `raa/prompts/pattern_matching.md` — RAA-B prompt template
+- `raa/prompts/entity_extraction.md` — RAA-C prompt template
+- `tests/raa/unit/test_c4_validator.py` — 18 pure validator tests
+- `tests/raa/unit/test_strategy_subgraphs.py` — 17 structured extraction + enforcement tests
+
+### Change Log
+
+- 2026-05-23: Implemented Story 2.2 — C4 metamodel hierarchy enforcement, structured extraction in private subgraphs, open question propagation (7 files created, 6 modified, 38 tests, all ACs satisfied)
+
+### Review Findings
+
+- [x] [Review][Patch] Relationship validation discards valid relationships to existing entities in the running model [raa/raa/utils/c4_validator.py:112]
+- [x] [Review][Patch] Cascading orphan component validation leak ignores parent container exclusion [raa/raa/utils/c4_validator.py:73]
+- [x] [Review][Patch] Unsafe system.get call on string elements in _model_containers [raa/raa/utils/c4_validator.py:202]
+- [x] [Review][Patch] Duplicate skill context key overwrite in prompt loader [raa/raa/utils/prompt_loader.py:50]
+- [x] [Review][Patch] Double checkpointer saver connection close on dispatch [raa/raa/graphs/execution_loop.py:192]

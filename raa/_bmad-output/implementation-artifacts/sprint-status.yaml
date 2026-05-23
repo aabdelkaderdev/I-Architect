@@ -50,10 +50,11 @@ development_status:
   epic-1-retrospective: optional
   epic-2: in-progress
   2-1-concurrency-orchestrator-and-parallel-subgraph-dispatch: done
-  2-2-c4-metamodel-hierarchy-enforcement-in-private-subgraphs: ready-for-dev
+  2-2-c4-metamodel-hierarchy-enforcement-in-private-subgraphs: done
   2-3-saam-first-fragment-scoring: backlog
   2-4-conservative-entity-deduplication-and-c4-boundary-grouping: backlog
   2-5-cross-cutting-concern-promotion-and-saam-score-calibration: backlog
+  2-6-skill-resource-bundle-and-tag-based-prompt-injection: done
   epic-2-retrospective: optional
   epic-3: backlog
   3-1-open-question-classification-and-human-review-payload-generation: backlog

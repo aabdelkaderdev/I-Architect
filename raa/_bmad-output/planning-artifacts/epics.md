@@ -341,6 +341,30 @@ So that cross-cutting infrastructure concerns are clearly modeled and design qua
 **And** it must calibrate the entity `saam_score` reserving a value of `1.0` *only* for entities with a component-level diagram, no functional overlap, and all direct scenarios passing
 **And** it must assign a reduced SAAM score to deduplicated or overlapping entities.
 
+### Story 2.6: Skill Resource Bundle and Tag-Based Prompt Injection
+
+As a Pipeline Engineer,
+I want to define design-time reference guidelines under a Skills resource bundle matching the structure of developer reference skills,
+So that strategy-parallel subgraphs and final reconciliation nodes execute with structured, concise, and context-targeted instructions.
+
+**Acceptance Criteria:**
+
+**Given** a Skills directory (`./Skills/`) containing reference markdown files for C4 Level Mapping, Entity Extraction, Relationship Extraction, Pattern Selection, and Technology Inference
+**When** a Skill reference file is authored, it must follow the standard skill template:
+  - **YAML Frontmatter:** Containing `name`, `description`, and `metadata` (e.g., `target_node`, `version`)
+  - **Product Summary / Definition:** Explaining the architectural concept
+  - **When to Use:** Bulleted list of when the guidelines apply
+  - **Quick Reference / Rules:** Structured tables or lists mapping requirements to extraction rules
+  - **Decision Guidance:** Comparative logic or matrices (e.g., SQL vs NoSQL, Monolith vs Microservices)
+  - **Workflow:** Step-by-step extraction steps for the LLM node
+  - **Common Gotchas:** Mistakes or edge cases to avoid (e.g., circular dependencies, orphaned components)
+  - **Verification Checklist:** Self-validation checkboxes for the LLM node's output
+**When** the prompt loader renders a prompt template containing skill placeholders
+**Then** it must retrieve the specific Skill file by name (e.g., `Skills/Entity_Extraction.md`) and extract target sections or items by header tag (e.g., `entity_extraction:rules` from "Quick Reference", or `entity_extraction:checklist` from "Verification Checklist")
+**And** it must validate and enforce that any injected instruction excerpt or individual rule statement is highly concise ($\le 25$ words each) to preserve LLM token context
+**And** it must inject the extracted sections/checklists dynamically into the mustache prompt template context before rendering
+**And** it must raise a `FileNotFoundError` or clear exception if a requested skill file, section, or tag is missing.
+
 ## Epic 3: Interactive Human Review Gate (Phase 7)
 
 Emit review payloads and halt execution with LangGraph interrupts for high-priority open questions in interactive mode, allowing authoritative human input with a fallback autonomous bypass.

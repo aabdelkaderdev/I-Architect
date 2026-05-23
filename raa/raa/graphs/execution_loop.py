@@ -181,19 +181,9 @@ async def _invoke_strategy(
     private_input: StrategySubgraphInput,
     child_config: RunnableConfig,
     compiled_graph,
-    *,
-    close_checkpointer: bool = False,
-    saver: AsyncSqliteSaver | None = None,
 ) -> dict:
     """Invoke a single compiled subgraph asynchronously."""
-    try:
-        return await compiled_graph.ainvoke(private_input, child_config)
-    finally:
-        if close_checkpointer and saver is not None:
-            try:
-                await saver.conn.close()
-            except Exception:
-                pass
+    return await compiled_graph.ainvoke(private_input, child_config)
 
 
 # ── Main dispatch node ─────────────────────────────────────────────────────
@@ -293,8 +283,7 @@ async def dispatch_strategy_subgraphs(
                 builder = _BUILDERS[strategy]()
                 compiled = builder.compile(checkpointer=saver)
                 tasks[strategy] = asyncio.create_task(
-                    _invoke_strategy(strategy, private_input, child_config, compiled,
-                                     close_checkpointer=True, saver=saver)
+                    _invoke_strategy(strategy, private_input, child_config, compiled)
                 )
 
         # Gather results concurrently
@@ -345,4 +334,15 @@ async def dispatch_strategy_subgraphs(
         )
         output_records.append(record)
 
-    return {"batch_outputs": output_records}
+    # Collect open_questions from subgraph results and annotate with batch/strategy
+    open_questions: list[dict] = []
+    for strategy in strategies_to_run:
+        result = results.get(strategy) or {}
+        questions = result.get("open_questions") or []
+        for q in questions:
+            q.setdefault("batch_id", batch["group_id"])
+            q.setdefault("batch_index", batch_index)
+            q.setdefault("strategy", strategy)
+            open_questions.append(q)
+
+    return {"batch_outputs": output_records, "open_questions": open_questions}

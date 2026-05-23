@@ -6,32 +6,78 @@ compilation with the appropriate SQLite checkpointer.
 """
 from __future__ import annotations
 
+import logging
+
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 
 from raa.state.models import ArchFragment
 from raa.subgraphs.schemas import StrategySubgraphState
+from raa.utils.c4_validator import enforce_fragment_hierarchy
+from raa.utils.prompt_loader import load_prompt
+
+logger = logging.getLogger(__name__)
+
+_PROMPT_TEMPLATE = "entity_extraction.md"
 
 
 def build_raa_c_subgraph() -> StateGraph:
-    """Build an uncompiled RAA-C subgraph (entity/relationship strategy).
-
-    Story 2.1 scaffold: the node returns a minimal ArchFragment with
-    strategy metadata. Real entity extraction is implemented in Story 2.5.
-    """
+    """Build an uncompiled RAA-C subgraph (entity/relationship strategy)."""
     builder = StateGraph(StrategySubgraphState)
 
-    def extract_entities(state: StrategySubgraphState) -> dict:
-        fragment = ArchFragment(
-            metadata={
-                "strategy": "raa_c",
-                "batch_id": state["batch"].get("group_id", ""),
-                "note": "Entity extraction (Story 2.5 implements real logic)",
-            }
+    def extract_entities(state: StrategySubgraphState, config: RunnableConfig) -> dict:
+        configurable = config.get("configurable", {})
+        llm = configurable.get("raa_c_llm")
+        batch = state["batch"]
+        running_model = state.get("running_model", {})
+
+        prompt = load_prompt(_PROMPT_TEMPLATE, {
+            "batch_id": batch.get("group_id", ""),
+            "reduced_confidence": str(state.get("reduced_confidence", False)),
+            "running_model": str(running_model),
+            "requirements": str(batch.get("asr_records", []) + batch.get("non_asr_records", [])),
+            "bridge_requirements": str(state.get("bridge_requirements", [])),
+            "quality_weights": str(state.get("quality_weights", {})),
+        })
+
+        fragment = _extract_fragment(llm, prompt)
+        cleaned, questions = enforce_fragment_hierarchy(
+            fragment,
+            running_model,
+            batch_id=batch.get("group_id", ""),
+            strategy="raa_c",
         )
-        return {"arch_fragment": fragment}
+        return {"arch_fragment": cleaned, "open_questions": questions}
 
     builder.add_node("extract_entities", extract_entities)
     builder.add_edge(START, "extract_entities")
     builder.add_edge("extract_entities", END)
 
     return builder
+
+
+def _extract_fragment(llm, prompt: str) -> ArchFragment:
+    """Run structured extraction or return a minimal fragment when no LLM is configured."""
+    if llm is None:
+        logger.warning("No raa_c_llm configured — returning empty ArchFragment")
+        return ArchFragment(metadata={"strategy": "raa_c", "note": "no LLM configured"})
+
+    try:
+        structured = llm.with_structured_output(ArchFragment, include_raw=True)
+        response = structured.invoke(prompt)
+    except Exception:
+        logger.exception("Structured extraction failed for RAA-C")
+        return ArchFragment(metadata={"strategy": "raa_c", "error": "extraction_failed"})
+
+    if isinstance(response, ArchFragment):
+        return response
+
+    if isinstance(response, dict):
+        if response.get("parsing_error"):
+            logger.warning("RAA-C parsing error: %s", response["parsing_error"])
+        parsed = response.get("parsed")
+        if isinstance(parsed, ArchFragment):
+            return parsed
+
+    logger.warning("RAA-C extraction returned unexpected type: %s", type(response))
+    return ArchFragment(metadata={"strategy": "raa_c", "error": "malformed_response"})

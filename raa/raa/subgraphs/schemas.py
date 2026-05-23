@@ -26,6 +26,7 @@ class StrategySubgraphInput(TypedDict):
 class StrategySubgraphState(StrategySubgraphInput):
     """Private state accumulated during subgraph execution."""
     arch_fragment: NotRequired[ArchFragment]
+    open_questions: NotRequired[list[dict]]
     intermediate: NotRequired[dict]
     error: NotRequired[str]
 
@@ -33,3 +34,4 @@ class StrategySubgraphState(StrategySubgraphInput):
 class StrategySubgraphOutput(TypedDict):
     """Normalized output returned to the parent after subgraph execution."""
     arch_fragment: ArchFragment
+    open_questions: NotRequired[list[dict]]

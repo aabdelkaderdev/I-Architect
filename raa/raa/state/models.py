@@ -24,22 +24,36 @@ class NormalizedRequirement(BaseModel):
 
 
 class C4Entity(BaseModel):
-    """A C4 container or component entity node."""
+    """A C4 entity node — person, system, external_system, container, or component.
+
+    Parent references enforce C4 hierarchy:
+    - Containers must declare ``parent_system_id``.
+    - Components must declare ``parent_container_id``.
+    """
     id: str
     name: str
     description: str = ""
-    c4_type: str = "container"  # "container", "component", "external"
+    c4_type: str = "container"
     technology: str = ""
+    parent_system_id: str | None = None
+    parent_container_id: str | None = None
+    requirement_ids: list[str] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
 
 
 class C4Relationship(BaseModel):
-    """A directed relationship between two C4 entities."""
+    """A directed relationship between two C4 entities.
+
+    ``diagram_scope`` reflects endpoint hierarchy depth:
+    ``context`` for person/system/external_system endpoints,
+    ``container`` for container endpoints, ``component`` for component endpoints.
+    """
     id: str
     source_id: str
     target_id: str
     description: str = ""
     relationship_type: str = "uses"
+    diagram_scope: str = ""
     metadata: dict = Field(default_factory=dict)
 
 
