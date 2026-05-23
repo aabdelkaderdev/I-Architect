@@ -59,7 +59,7 @@ development_status:
   epic-3: in-progress
   3-1-open-question-classification-and-human-review-payload-generation: done
   3-2-indefinite-langgraph-interrupt-gate: done
-  3-3-authoritative-human-answer-mapping-and-conflict-resolution: backlog
+  3-3-authoritative-human-answer-mapping-and-conflict-resolution: review
   epic-3-retrospective: optional
   epic-4: backlog
   4-1-global-model-merge-and-principled-open-question-resolution: backlog

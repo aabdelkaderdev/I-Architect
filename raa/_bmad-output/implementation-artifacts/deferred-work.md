@@ -18,3 +18,8 @@
 
 - **Missing execution logs/instrumentation**: The human_review_gate node triggers an indefinite interrupt or bypasses it silently without logging. Adding simple debug/info logging would help track when the gate is entered, suspended, and resumed. [raa/nodes/human_review_gate.py:220]
 
+## Deferred from: code review of 3-3-authoritative-human-answer-mapping-and-conflict-resolution.md (2026-05-23)
+
+- **Silent Dropping of Overrides when judge_llm is Missing**: If no `judge_llm` is configured, `_parse_human_override` catches the exception/missing config and returns empty instructions. While safe, this silently drops free-text overrides. [raa/nodes/conflict_resolution.py]
+
+
