@@ -17,7 +17,7 @@ set -euo pipefail
 
 GDRIVE_FILE_ID="1bQNQgDd-O8bb1XCuT0T9Ji-YYKqtH9Or"
 ARCHIVE_NAME="models.7z"
-EXTRACT_DIR="arlo"
+EXTRACT_DIR="."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd "$SCRIPT_DIR"
