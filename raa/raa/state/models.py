@@ -100,3 +100,22 @@ class FragmentScore(BaseModel):
     final_score: float
     scenario_contributions: list[dict] = Field(default_factory=list)
     is_primary: bool = False
+
+
+# ── Human Review Models (Story 3.1) ──────────────────────────────────────────
+
+
+class OpenQuestion(BaseModel):
+    """A classified open question for human review payload generation.
+
+    Questions are categorized as ``human_preferred`` (requires human judgment)
+    or ``judge_resolvable`` (can be auto-resolved by the Judge).
+    """
+    id: str = Field(description="Unique deterministic identifier for the question.")
+    question_type: str = Field(description="The category of question (e.g., contention, hierarchy_conflict).")
+    description: str = Field(description="Human-readable description of the issue or conflict.")
+    context: dict = Field(default_factory=dict, description="Contextual parameters and C4 entity references.")
+    resolution_owner: str = Field(default="human_preferred", description="Determines who/what resolves this ('human_preferred' or 'judge_resolvable').")
+    resolution: str | None = Field(default=None, description="Pre-computed suggested resolution for the conflict.")
+    assumption_flag: bool = Field(default=False, description="Flag indicating if the suggestion is based on default assumptions.")
+    metadata: dict = Field(default_factory=dict, description="Additional system metadata for audit trails.")

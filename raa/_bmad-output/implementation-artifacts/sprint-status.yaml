@@ -48,7 +48,7 @@ development_status:
   1-3-centroid-anchored-batch-construction: done
   1-4-overlap-bridging-coherence-gating-and-priority-queue-ordering: done
   epic-1-retrospective: optional
-  epic-2: in-progress
+  epic-2: done
   2-1-concurrency-orchestrator-and-parallel-subgraph-dispatch: done
   2-2-c4-metamodel-hierarchy-enforcement-in-private-subgraphs: done
   2-3-saam-first-fragment-scoring: done
@@ -56,8 +56,8 @@ development_status:
   2-5-cross-cutting-concern-promotion-and-saam-score-calibration: done
   2-6-skill-resource-bundle-and-tag-based-prompt-injection: done
   epic-2-retrospective: optional
-  epic-3: backlog
-  3-1-open-question-classification-and-human-review-payload-generation: backlog
+  epic-3: in-progress
+  3-1-open-question-classification-and-human-review-payload-generation: done
   3-2-indefinite-langgraph-interrupt-gate: backlog
   3-3-authoritative-human-answer-mapping-and-conflict-resolution: backlog
   epic-3-retrospective: optional
