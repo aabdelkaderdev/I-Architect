@@ -1,12 +1,18 @@
 """
-Unit tests for human review gate node (Story 3.1).
+Unit tests for human review gate node (Story 3.1 + 3.2).
 """
 from __future__ import annotations
 
-import pytest
+from unittest.mock import patch
 
-from raa.nodes.human_review_gate import prepare_human_review_payload
+import pytest
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import StateGraph
+from langgraph.types import Command
+
+from raa.nodes.human_review_gate import human_review_gate, prepare_human_review_payload
 from raa.state.models import OpenQuestion
+from raa.state.schemas import RAAState
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -476,4 +482,199 @@ class TestReviewPatches:
         assert payload["conflicting_elements"][0]["name"] == "Service A"
         assert payload["model_statistics"]["relationship_count"] == 2
         assert payload["model_statistics"]["total_entities"] == 2
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Story 3.2: Indefinite LangGraph Interrupt Gate
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def _make_gate_state(review_mode="autonomous", human_review_payload=None):
+    """Create a state dict with fields needed by human_review_gate."""
+    return {
+        "batch_cursor": 0,
+        "quality_weights": {},
+        "requirements": {},
+        "asrs": [],
+        "non_asr": [],
+        "condition_groups": [],
+        "review_mode": review_mode,
+        "normalized_asrs": [],
+        "normalized_non_asr": [],
+        "embeddings_ready": False,
+        "batch_outputs": [],
+        "open_questions": [],
+        "incoherent_batches": [],
+        "arch_model": {},
+        "judge_rankings": {},
+        "human_review_payload": human_review_payload or {},
+    }
+
+
+class TestHumanReviewGateAutonomous:
+    """Autonomous mode: bypass interrupt, return empty dict."""
+
+    def test_autonomous_returns_empty_dict(self):
+        state = _make_gate_state(review_mode="autonomous")
+        result = human_review_gate(state)
+        assert result == {}
+
+    def test_autonomous_does_not_call_interrupt(self):
+        state = _make_gate_state(review_mode="autonomous")
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            result = human_review_gate(state)
+            mock_interrupt.assert_not_called()
+        assert result == {}
+
+    def test_default_mode_is_autonomous(self):
+        """When review_mode is missing, defaults to autonomous (returns {})."""
+        state = _make_gate_state()
+        state.pop("review_mode", None)
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            result = human_review_gate(state)
+            mock_interrupt.assert_not_called()
+        assert result == {}
+
+    def test_unknown_mode_bypasses_interrupt(self):
+        """Any non-interactive value should bypass the interrupt."""
+        state = _make_gate_state(review_mode="some_future_mode")
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            result = human_review_gate(state)
+            mock_interrupt.assert_not_called()
+        assert result == {}
+
+    def test_explicit_none_mode_bypasses_interrupt(self):
+        """When review_mode is explicitly None, defaults to autonomous."""
+        state = _make_gate_state(review_mode=None)
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            result = human_review_gate(state)
+            mock_interrupt.assert_not_called()
+        assert result == {}
+
+
+class TestHumanReviewGateInteractive:
+    """Interactive mode: trigger interrupt, return human_answers."""
+
+    def test_interactive_calls_interrupt_with_payload(self):
+        payload = {"open_questions": [], "model_statistics": {}}
+        state = _make_gate_state(review_mode="interactive", human_review_payload=payload)
+
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            mock_interrupt.return_value = {"resolved": True}
+            result = human_review_gate(state)
+            mock_interrupt.assert_called_once_with(payload)
+        assert result == {"human_answers": {"resolved": True}}
+
+    def test_interactive_returns_human_answers(self):
+        payload = {"open_questions": [{"id": "q1"}]}
+        state = _make_gate_state(review_mode="interactive", human_review_payload=payload)
+        resume_data = {"answers": [{"question_id": "q1", "decision": "approved"}]}
+
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            mock_interrupt.return_value = resume_data
+            result = human_review_gate(state)
+
+        assert "human_answers" in result
+        assert result["human_answers"] == resume_data
+
+    def test_interactive_empty_payload_falls_back_to_empty_dict(self):
+        """When human_review_payload is missing, interrupt is called with {}."""
+        state = _make_gate_state(review_mode="interactive")
+        state.pop("human_review_payload", None)
+
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            mock_interrupt.return_value = {}
+            result = human_review_gate(state)
+            mock_interrupt.assert_called_once_with({})
+        assert result == {"human_answers": {}}
+
+    def test_interactive_non_dict_resume_coerced_to_dict(self):
+        """When interrupt returns a non-dict, it is coerced to a dict with 'raw_response' key."""
+        state = _make_gate_state(review_mode="interactive")
+        with patch("raa.nodes.human_review_gate.interrupt") as mock_interrupt:
+            mock_interrupt.return_value = "yes"
+            result = human_review_gate(state)
+        assert result == {"human_answers": {"raw_response": "yes"}}
+
+
+class TestHumanReviewGateIntegration:
+    """Integration tests using a minimal LangGraph StateGraph with MemorySaver."""
+
+    def _build_graph(self, review_mode="interactive"):
+        """Build a minimal graph: payload node → gate node → final node."""
+        builder = StateGraph(RAAState)
+
+        def prepare(state: RAAState) -> dict:
+            return prepare_human_review_payload(state)
+
+        def gate(state: RAAState) -> dict:
+            return human_review_gate(state)
+
+        def finalize(state: RAAState) -> dict:
+            return {"embeddings_ready": True}
+
+        builder.add_node("prepare", prepare)
+        builder.add_node("gate", gate)
+        builder.add_node("finalize", finalize)
+
+        builder.set_entry_point("prepare")
+        builder.add_edge("prepare", "gate")
+        builder.add_edge("gate", "finalize")
+        builder.set_finish_point("finalize")
+
+        return builder.compile(checkpointer=MemorySaver())
+
+    def test_interactive_mode_halt_and_resume(self):
+        """Interactive mode halts at gate; Command(resume=...) continues past it."""
+        graph = self._build_graph(review_mode="interactive")
+
+        state = {
+            "review_mode": "interactive",
+            "open_questions": [
+                {"question_type": "change_risk", "description": "Test risk"}
+            ],
+            "arch_model": {},
+        }
+
+        config = {"configurable": {"thread_id": "test-interactive-1"}}
+
+        # First invocation — should halt at the gate
+        first_result = graph.invoke(state, config)
+        # After halting, graph state should contain the human_review_payload
+        # from the prepare step
+        assert "human_review_payload" in first_result
+
+        # Resume with Command
+        resume_data = {"answers": [{"question_id": "q_0_change_risk", "decision": "approved"}]}
+        final_result = graph.invoke(Command(resume=resume_data), config)
+
+        # After resume, graph reaches finalize — embeddings_ready should be True
+        assert final_result.get("embeddings_ready") is True
+        # human_answers should contain the resume data
+        assert final_result.get("human_answers") == resume_data
+
+    def test_interactive_mode_preserves_payload_in_state(self):
+        """After halt, the state should preserve the human_review_payload."""
+        graph = self._build_graph(review_mode="interactive")
+
+        state = {
+            "review_mode": "interactive",
+            "open_questions": [
+                {"question_type": "tie", "description": "Strategy tie"}
+            ],
+            "arch_model": {},
+        }
+
+        config = {"configurable": {"thread_id": "test-interactive-2"}}
+
+        first_result = graph.invoke(state, config)
+
+        payload = first_result.get("human_review_payload", {})
+        assert "open_questions" in payload
+        assert len(payload["open_questions"]) == 1
+        assert payload["open_questions"][0]["question_type"] == "tie"
+
+        resume_data = {"answers": []}
+        final_result = graph.invoke(Command(resume=resume_data), config)
+        assert final_result.get("human_answers") == resume_data
 

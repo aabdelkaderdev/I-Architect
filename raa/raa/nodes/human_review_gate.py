@@ -1,13 +1,19 @@
 """
-Human review gate node (Story 3.1).
+Human review gate node (Story 3.1 + 3.2).
 
 Classifies open questions and builds a detailed human review payload
 with categorized questions, conflicting elements, model statistics,
 and pre-computed suggested resolutions for judge-resolvable questions.
+
+In interactive mode, triggers an indefinite LangGraph interrupt to pause
+execution for human review. In autonomous mode, bypasses the interrupt.
 """
 from __future__ import annotations
 
 from typing import Any
+
+from langgraph.types import interrupt
+
 from raa.state.models import OpenQuestion
 from raa.state.schemas import RAAState
 
@@ -203,3 +209,33 @@ def prepare_human_review_payload(state: RAAState) -> dict:
     }
 
     return {"human_review_payload": payload}
+
+
+def human_review_gate(state: RAAState) -> dict:
+    """Trigger an indefinite LangGraph interrupt for human review in interactive mode.
+
+    In ``"interactive"`` mode, calls ``interrupt()`` with the prepared
+    ``human_review_payload``, suspending graph execution indefinitely until
+    a ``Command(resume=...)`` is received. The resume value is written to the
+    ``human_answers`` state channel.
+
+    In ``"autonomous"`` mode (or any other value), bypasses the interrupt
+    entirely and returns an empty dict.
+
+    Args:
+        state: Full RAA state with ``review_mode`` and ``human_review_payload`` channels.
+
+    Returns:
+        dict with key ``human_answers`` containing the resume payload in interactive
+        mode, or an empty dict in autonomous mode.
+    """
+    review_mode = state.get("review_mode") or "autonomous"
+
+    if review_mode == "interactive":
+        payload = state.get("human_review_payload") or {}
+        human_answers = interrupt(payload)
+        if not isinstance(human_answers, dict):
+            human_answers = {"raw_response": human_answers}
+        return {"human_answers": human_answers}
+
+    return {}

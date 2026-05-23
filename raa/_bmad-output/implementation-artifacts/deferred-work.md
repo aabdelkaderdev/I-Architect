@@ -13,3 +13,8 @@
 - **Potential serialization failure on custom metadata/context values**: Calling `q.model_dump()` may fail to serialize complex nested objects in `context` or `metadata`. [raa/nodes/human_review_gate.py:158]
 - **Unit test mock state bypasses RAAState definition**: The `_make_state` helper function uses primitive mock dictionaries instead of proper schemas, potentially hiding type mismatch issues. [tests/raa/unit/test_human_review_gate.py:15]
 - **Lack of validation constraints on OpenQuestion fields**: Fields like `id` and `question_type` have no string constraints, allowing empty values. [raa/state/models.py:29]
+
+## Deferred from: code review of 3-2-indefinite-langgraph-interrupt-gate.md (2026-05-23)
+
+- **Missing execution logs/instrumentation**: The human_review_gate node triggers an indefinite interrupt or bypasses it silently without logging. Adding simple debug/info logging would help track when the gate is entered, suspended, and resumed. [raa/nodes/human_review_gate.py:220]
+
