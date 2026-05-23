@@ -18,3 +18,39 @@ class NormalizedRequirement(BaseModel):
     is_asr: bool
     quality_attributes: list[str] = Field(default_factory=list)
     condition_text: str | None = None
+
+
+# ── C4 Architecture Fragment Models (Story 2.1) ───────────────────────────
+
+
+class C4Entity(BaseModel):
+    """A C4 container or component entity node."""
+    id: str
+    name: str
+    description: str = ""
+    c4_type: str = "container"  # "container", "component", "external"
+    technology: str = ""
+    metadata: dict = Field(default_factory=dict)
+
+
+class C4Relationship(BaseModel):
+    """A directed relationship between two C4 entities."""
+    id: str
+    source_id: str
+    target_id: str
+    description: str = ""
+    relationship_type: str = "uses"
+    metadata: dict = Field(default_factory=dict)
+
+
+class ArchFragment(BaseModel):
+    """Output from a single strategy subgraph (RAA-A, RAA-B, or RAA-C).
+
+    Permissive by design for Story 2.1 — strict C4 hierarchy validation
+    belongs to Story 2.2.
+    """
+    entities: list[C4Entity] = Field(default_factory=list)
+    relationships: list[C4Relationship] = Field(default_factory=list)
+    cross_cutting_candidates: list[str] = Field(default_factory=list)
+    assumption_flags: list[str] = Field(default_factory=list)
+    metadata: dict = Field(default_factory=dict)

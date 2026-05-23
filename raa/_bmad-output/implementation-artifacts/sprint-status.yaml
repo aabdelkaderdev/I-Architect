@@ -48,9 +48,9 @@ development_status:
   1-3-centroid-anchored-batch-construction: done
   1-4-overlap-bridging-coherence-gating-and-priority-queue-ordering: done
   epic-1-retrospective: optional
-  epic-2: backlog
-  2-1-concurrency-orchestrator-and-parallel-subgraph-dispatch: backlog
-  2-2-c4-metamodel-hierarchy-enforcement-in-private-subgraphs: backlog
+  epic-2: in-progress
+  2-1-concurrency-orchestrator-and-parallel-subgraph-dispatch: done
+  2-2-c4-metamodel-hierarchy-enforcement-in-private-subgraphs: ready-for-dev
   2-3-saam-first-fragment-scoring: backlog
   2-4-conservative-entity-deduplication-and-c4-boundary-grouping: backlog
   2-5-cross-cutting-concern-promotion-and-saam-score-calibration: backlog
