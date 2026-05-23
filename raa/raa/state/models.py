@@ -38,6 +38,7 @@ class C4Entity(BaseModel):
     parent_system_id: str | None = None
     parent_container_id: str | None = None
     requirement_ids: list[str] = Field(default_factory=list)
+    saam_score: float = Field(default=0.0)
     metadata: dict = Field(default_factory=dict)
 
 

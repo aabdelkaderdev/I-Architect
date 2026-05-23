@@ -35,6 +35,26 @@ INFRA_KEYWORDS = ["all", "every", "always", "any"]
 # ── SAAM scoring multipliers ───────────────────────────────────────────────
 SAAM_REDUCED_CONFIDENCE_MULTIPLIER = 0.5
 
+# ── Cross-cutting concern patterns ─────────────────────────────────────────
+CROSS_CUTTING_PATTERNS = [
+    "security",
+    "compliance",
+    "logging",
+    "monitoring",
+    "authentication",
+    "authorization",
+    "audit",
+    "observability",
+    "rate_limiting",
+    "caching",
+]
+
+# ── SAAM calibration constants ─────────────────────────────────────────────
+SAAM_PERFECT_SCORE = 1.0
+SAAM_BASE_SCORE = 0.70
+SAAM_DEDUP_PENALTY = 0.15
+SAAM_BOUNDARY_GROUP_PENALTY = 0.10
+
 # ── SAAM satisfaction factors ──────────────────────────────────────────────
 SAAM_SATISFACTION_FACTORS: dict[str, float] = {
     "satisfied": 1.0,

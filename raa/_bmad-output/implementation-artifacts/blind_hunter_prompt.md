@@ -1,1461 +1,2621 @@
-# Role: Blind Hunter
+# Blind Hunter Code Review Prompt
 
-You are a cynical, jaded reviewer with zero patience for sloppy work. The content was submitted by a clueless weasel and you expect to find problems. Be skeptical of everything. Look for what is missing, not just what is wrong. Use a precise, professional tone — no profanity or personal attacks.
+You are executing the `bmad-review-adversarial-general` workflow.
 
-Review the diff below with extreme skepticism — assume problems exist. Find at least ten issues to fix or improve.
-
-Output findings as a Markdown list (descriptions only).
+## Your Role
+You are a cynical, jaded reviewer with zero patience for sloppy work. The content was submitted by a clueless weasel and you expect to find problems. Be skeptical of everything. Look for what's missing, not just what's wrong. Use a precise, professional tone — no profanity or personal attacks.
 
 ## Input Diff
+Here is the diff output of the changes to review. You have NO project context, NO spec, NO other documentation.
 
 ```diff
-diff --git a/raa/Skills/SKILL.md b/raa/Skills/SKILL.md
+diff --git a/raa/raa/judge/__init__.py b/raa/raa/judge/__init__.py
+index 607f7b0..332210f 100644
+--- a/raa/raa/judge/__init__.py
++++ b/raa/raa/judge/__init__.py
+@@ -1,5 +1 @@
+-"""Judge package — SAAM-first fragment scoring and ranking.
+-
+-Story 2.3 implements pure deterministic scoring. Later stories add
+-deduplication, boundary grouping, and merge into ``arch_model``.
+-"""
++"""Judge package — SAAM-first fragment scoring, ranking, deduplication, cross-cutting promotion, SAAM calibration, and merge into ``arch_model``."""
+diff --git a/raa/raa/judge/cross_cutting.py b/raa/raa/judge/cross_cutting.py
 new file mode 100644
-index 0000000..f57e65e
+index 0000000..e3e7916
 --- /dev/null
-+++ b/raa/Skills/SKILL.md
-@@ -0,0 +1,24 @@
-+---
-+name: raa
-+description: Requirements Analysis Agent references for C4 extraction, relationship mapping, pattern selection, technology inference, and SAAM-informed reconciliation.
-+metadata:
-+  version: "1.0"
-+  target: raa
-+---
++++ b/raa/raa/judge/cross_cutting.py
+@@ -0,0 +1,254 @@
++"""
++Cross-cutting concern promotion engine (Story 2.5).
 +
-+# RAA Skill
++Pure deterministic engine — no LLM calls, no randomness.
++"""
++from __future__ import annotations
 +
-+## Overview
++from raa.state.models import C4Entity, C4Relationship
++from raa.utils.constants import CROSS_CUTTING_PATTERNS, INFRA_KEYWORDS
 +
-+Design-time reference bundle for the Requirements Analysis Agent pipeline. Each reference file contains authoritative rules, decision guidance, workflows, gotchas, and verification checklists for one domain concern. Runtime prompts inject only tagged sections — never the full bundle.
 +
-+## References
++def detect_cross_cutting_candidates(
++    arch_model: dict,
++    patterns: list[str] | None = None,
++) -> list[dict]:
++    """Scan arch_model for cross-cutting candidates matching known patterns.
 +
-+- `references/c4_level_mapping.md` — C4 level assignment rules and checklist. Use when categorizing entities by C4 type.
-+- `references/entity_extraction.md` — Entity extraction rules and checklist. Use when identifying C4 entities from requirements.
-+- `references/relationship_extraction.md` — Relationship derivation rules and checklist. Use when connecting entities.
-+- `references/pattern_selection.md` — Architectural pattern decision guidance. Use when matching requirements to known patterns.
-+- `references/technology_inference.md` — Technology annotation inference rules. Use when guessing tech stack from requirements.
-+- `references/saam.md` — SAAM scenario evaluation reference. Use for scenario-based architecture analysis.
-+- `references/c4.md` — General C4 model reference. Use for shared C4 metamodel rules.
-+- `references/quality_attributes.md` — Quality attribute reference. Use when evaluating non-functional requirements.
-diff --git a/raa/Skills/references/c4_level_mapping.md b/raa/Skills/references/c4_level_mapping.md
++    Args:
++        arch_model: Dict with ``entities``, ``relationships``, and optionally
++            ``cross_cutting_candidates`` (list[str] from ArchFragment).
++        patterns: Patterns to match against. Defaults to CROSS_CUTTING_PATTERNS + INFRA_KEYWORDS.
++
++    Returns:
++        List of detection records with ``candidate_pattern``, ``related_entity_ids``,
++        and ``requirement_ids``.
++    """
++    if patterns is None:
++        patterns = list(CROSS_CUTTING_PATTERNS) + list(INFRA_KEYWORDS)
++
++    cross_cutting_candidates: list[str] = arch_model.get("cross_cutting_candidates") or []
++    entities: list[dict] = arch_model.get("entities") or []
++
++    detections: list[dict] = []
++    seen_patterns: set[str] = set()
++
++    for candidate in cross_cutting_candidates:
++        candidate_lower = candidate.lower().strip()
++        for pattern in patterns:
++            pattern_lower = pattern.lower()
++            if pattern_lower not in candidate_lower:
++                continue
++            if pattern_lower in seen_patterns:
++                continue
++            seen_patterns.add(pattern_lower)
++
++            related_entity_ids: list[str] = []
++            collected_req_ids: set[str] = set()
++
++            for entity in entities:
++                eid = entity.get("id", "")
++                name = (entity.get("name") or "").lower()
++                desc = (entity.get("description") or "").lower()
++                tech = (entity.get("technology") or "").lower()
++
++                if pattern_lower in name or pattern_lower in desc or pattern_lower in tech:
++                    if eid:
++                        related_entity_ids.append(eid)
++                    req_ids = entity.get("requirement_ids") or []
++                    collected_req_ids.update(req_ids)
++
++            detections.append({
++                "candidate_pattern": pattern_lower,
++                "related_entity_ids": related_entity_ids,
++                "requirement_ids": sorted(collected_req_ids),
++            })
++
++    # Also detect patterns from entity metadata cross_cutting_candidates
++    for entity in entities:
++        meta = entity.get("metadata") or {}
++        entity_cc = meta.get("cross_cutting_candidates") or []
++        for cc in entity_cc:
++            cc_lower = str(cc).lower().strip()
++            for pattern in patterns:
++                pattern_lower = pattern.lower()
++                if pattern_lower not in cc_lower:
++                    continue
++                if pattern_lower in seen_patterns:
++                    continue
++                seen_patterns.add(pattern_lower)
++
++                related_entity_ids: list[str] = []
++                collected_req_ids: set[str] = set()
++
++                for e2 in entities:
++                    eid2 = e2.get("id", "")
++                    name2 = (e2.get("name") or "").lower()
++                    desc2 = (e2.get("description") or "").lower()
++                    tech2 = (e2.get("technology") or "").lower()
++                    meta2 = e2.get("metadata") or {}
++                    e2_cc = meta2.get("cross_cutting_candidates") or []
++
++                    if pattern_lower in name2 or pattern_lower in desc2 or pattern_lower in tech2 or pattern_lower in [str(c).lower() for c in e2_cc]:
++                        if eid2:
++                            related_entity_ids.append(eid2)
++                        req_ids2 = e2.get("requirement_ids") or []
++                        collected_req_ids.update(req_ids2)
++
++                detections.append({
++                    "candidate_pattern": pattern_lower,
++                    "related_entity_ids": related_entity_ids,
++                    "requirement_ids": sorted(collected_req_ids),
++                })
++
++    return detections
++
++
++def promote_cross_cutting_to_component(
++    detection: dict,
++    arch_model: dict,
++) -> tuple[C4Entity, list[str]]:
++    """Create a promoted component entity for a detected cross-cutting concern.
++
++    Args:
++        detection: Detection record from ``detect_cross_cutting_candidates``.
++        arch_model: Current arch_model dict.
++
++    Returns:
++        Tuple of (promoted C4Entity, list of affected source entity IDs).
++    """
++    pattern = detection["candidate_pattern"]
++    component_id = f"cc_{pattern}"
++    affected_entity_ids = list(detection.get("related_entity_ids") or [])
++    requirement_ids = list(detection.get("requirement_ids") or [])
++
++    # Find parent container — first container whose name/description mentions pattern
++    parent_container_id: str | None = None
++    for entity in arch_model.get("entities") or []:
++        c4_type = entity.get("c4_type", "")
++        if c4_type != "container":
++            continue
++        name = (entity.get("name") or "").lower()
++        desc = (entity.get("description") or "").lower()
++        if pattern in name or pattern in desc:
++            parent_container_id = entity.get("id")
++            break
++
++    promoted = C4Entity(
++        id=component_id,
++        name=f"{pattern.title()} (Cross-Cutting)",
++        description=f"Cross-cutting {pattern} concern promoted to structural component.",
++        c4_type="component",
++        technology="",
++        parent_container_id=parent_container_id,
++        requirement_ids=requirement_ids,
++        saam_score=0.0,
++    )
++
++    return promoted, affected_entity_ids
++
++
++def rewrite_relationships_for_promotion(
++    relationships: list[dict],
++    affected_entity_ids: list[str],
++    promoted_component_id: str,
++    pattern: str,
++) -> list[dict]:
++    """Rewrite relationships that transit through cross-cutting entities to point
++    to the promoted component.
++
++    A relationship is rewritten when its source or target is in the affected set
++    AND the relationship description or metadata mentions the pattern.
++
++    Args:
++        relationships: List of relationship dicts.
++        affected_entity_ids: Entity IDs that previously carried the cross-cutting concern.
++        promoted_component_id: The new component's ID.
++        pattern: The cross-cutting pattern being promoted.
++
++    Returns:
++        New list of relationship dicts (never mutates input).
++    """
++    affected_set = set(affected_entity_ids)
++    pattern_lower = pattern.lower()
++    rewritten: list[dict] = []
++
++    for rel in relationships:
++        rel = dict(rel)
++        src = rel.get("source_id", "")
++        tgt = rel.get("target_id", "")
++        desc = (rel.get("description") or "").lower()
++        meta = rel.get("metadata") or {}
++        meta_str = str(meta).lower()
++
++        mentions_pattern = pattern_lower in desc or pattern_lower in meta_str
++
++        if mentions_pattern:
++            if src in affected_set:
++                rel["source_id"] = promoted_component_id
++            if tgt in affected_set:
++                rel["target_id"] = promoted_component_id
++
++        rewritten.append(rel)
++
++    return rewritten
++
++
++def promote_all_cross_cutting(
++    arch_model: dict,
++) -> tuple[dict, list[dict]]:
++    """Detect and promote all cross-cutting concerns in the arch model.
++
++    Args:
++        arch_model: Dict with ``entities``, ``relationships``, and optionally
++            ``cross_cutting_candidates``.
++
++    Returns:
++        Tuple of (updated_arch_model, open_questions).
++    """
++    model = {
++        "entities": [dict(e) for e in (arch_model.get("entities") or [])],
++        "relationships": [dict(r) for r in (arch_model.get("relationships") or [])],
++        "boundary_groups": list(arch_model.get("boundary_groups") or []),
++        "cross_cutting_candidates": list(arch_model.get("cross_cutting_candidates") or []),
++    }
++
++    detections = detect_cross_cutting_candidates(model)
++    open_questions: list[dict] = []
++
++    for detection in detections:
++        promoted, affected_ids = promote_cross_cutting_to_component(detection, model)
++
++        if promoted.parent_container_id is None:
++            open_questions.append({
++                "question_type": "change_risk",
++                "description": (
++                    f"Cross-cutting '{detection['candidate_pattern']}' promoted to "
++                    f"component '{promoted.id}' but no parent container could be "
++                    "determined. Manual container assignment required."
++                ),
++                "source": "cross_cutting_promotion",
++                "severity": "medium",
++                "promoted_component_id": promoted.id,
++            })
++
++        # Add promoted component to entities
++        model["entities"].append(promoted.model_dump())
++
++        # Rewrite relationships
++        model["relationships"] = rewrite_relationships_for_promotion(
++            model["relationships"],
++            affected_ids,
++            promoted.id,
++            detection["candidate_pattern"],
++        )
++
++        # Remove requirement IDs from affected entities (move to promoted component)
++        promoted_req_ids = set(promoted.requirement_ids)
++        for i, entity in enumerate(model["entities"]):
++            if entity.get("id") in affected_ids:
++                req_ids = entity.get("requirement_ids") or []
++                new_req_ids = [r for r in req_ids if r not in promoted_req_ids]
++                entity["requirement_ids"] = new_req_ids
++
++    return model, open_questions
+diff --git a/raa/raa/judge/deduplication.py b/raa/raa/judge/deduplication.py
 new file mode 100644
-index 0000000..2a5edc5
+index 0000000..c9b56ae
 --- /dev/null
-+++ b/raa/Skills/references/c4_level_mapping.md
-@@ -0,0 +1,51 @@
-+---
-+name: c4_level_mapping
-+description: Rules for assigning C4 model levels to extracted architectural entities.
-+metadata:
-+  target_node: raa_a
-+  version: "1.0"
-+---
-+
-+# C4 Level Mapping
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for mapping requirement concepts to C4 model levels: person, system, external_system, container, and component.
-+
-+## When to Use
-+
-+Use when an extraction node must decide the C4 type of a candidate entity. Apply rules before emitting any entity.
-+
-+## Quick Reference / Rules <!-- tag: c4_level_mapping:rules -->
-+
-+- Person entities represent human actors described in requirements.
-+- System entities represent software systems owned by the organization.
-+- External system entities represent third-party systems outside organizational control.
-+- Container entities represent deployable units within a system.
-+- Component entities represent logical modules inside a container.
-+- Default to system when entity scope is ambiguous.
-+
-+## Decision Guidance
-+
-+If a requirement mentions both a deployable unit and its internal structure, assign the outer entity as container and inner entities as components. If only a name is given without deployment context, classify as system. Person entities must have explicit user-role language in the requirement.
-+
-+## Workflow
-+
-+1. Scan requirement text for actor nouns and system nouns.
-+2. Classify each noun into one of the five C4 levels.
-+3. Assign parent references (system for containers, container for components).
-+4. Flag ambiguous classifications as open questions.
-+
-+## Common Gotchas
-+
-+- Do not classify a database as a system; it is a container.
-+- Do not create component entities without a parent container.
-+- External systems are not owned; do not assign internal containers to them.
-+
-+## Verification Checklist <!-- tag: c4_level_mapping:checklist -->
-+
-+- Every entity has exactly one c4_type.
-+- Container entities have a parent_system_id.
-+- Component entities have a parent_container_id.
-+- Person entities have no parent reference.
-+- External system entities have no parent reference.
-diff --git a/raa/Skills/references/entity_extraction.md b/raa/Skills/references/entity_extraction.md
-new file mode 100644
-index 0000000..8bd1de6
---- /dev/null
-+++ b/raa/Skills/references/entity_extraction.md
-@@ -0,0 +1,53 @@
-+---
-+name: entity_extraction
-+description: Rules for extracting C4 entities from requirement batches.
-+metadata:
-+  target_node: raa_c
-+  version: "1.0"
-+---
-+
-+# Entity Extraction
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for extracting C4 entities from natural-language requirements. Covers entity naming, deduplication, and traceability to source requirements.
-+
-+## When to Use
-+
-+Use when an extraction node processes a batch of requirements and must produce a flat list of C4 entities with requirement traceability.
-+
-+## Quick Reference / Rules <!-- tag: entity_extraction:rules -->
-+
-+- Extract one entity per distinct architectural concept in the requirements.
-+- Prefer existing running-model entities when requirement intent matches.
-+- Name entities with domain terminology from the requirement text.
-+- Each entity must reference at least one requirement_id.
-+- Do not create duplicate entities for the same concept within one batch.
-+- Flag near-duplicate entities as open questions for later deduplication.
-+
-+## Decision Guidance
-+
-+When a requirement describes a concept already present in the running model, reuse the existing entity id and name. When a requirement describes a modification to an existing entity, extract the updated form and reference the same id.
-+
-+## Workflow
-+
-+1. Read each requirement in the batch.
-+2. Identify noun phrases that represent architectural elements.
-+3. Map each noun phrase to a C4 type using c4_level_mapping rules.
-+4. Check the running model for existing matching entities.
-+5. Create new entities only for genuinely new concepts.
-+6. Attach requirement_ids to every entity.
-+
-+## Common Gotchas
-+
-+- Do not extract entities for purely functional requirements with no architectural footprint.
-+- Do not conflate deployment concepts with logical architecture concepts.
-+- Avoid entity name collisions with the running model unless they represent the same concept.
-+
-+## Verification Checklist <!-- tag: entity_extraction:checklist -->
-+
-+- Every entity has requirement traceability.
-+- No duplicate entity names exist within the fragment.
-+- Entity names use domain terminology from source requirements.
-+- Running-model entities are reused when intent matches.
-+- Each entity has a valid c4_type.
-diff --git a/raa/Skills/references/relationship_extraction.md b/raa/Skills/references/relationship_extraction.md
-new file mode 100644
-index 0000000..c98244d
---- /dev/null
-+++ b/raa/Skills/references/relationship_extraction.md
-@@ -0,0 +1,54 @@
-+---
-+name: relationship_extraction
-+description: Rules for deriving C4 relationships between extracted entities.
-+metadata:
-+  target_node: raa_c
-+  version: "1.0"
-+---
-+
-+# Relationship Extraction
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for deriving directed relationships between C4 entities from requirement text. Covers relationship naming, direction, scope assignment, and cardinality.
-+
-+## When to Use
-+
-+Use when an extraction node has produced a candidate entity list and must connect them with valid C4 relationships.
-+
-+## Quick Reference / Rules <!-- tag: relationship_extraction:rules -->
-+
-+- Extract a relationship for every explicit interaction verb in the requirements.
-+- Source is the acting entity, target is the receiving entity.
-+- Relationship description must quote or paraphrase the requirement text.
-+- Use container scope for container-to-container relationships.
-+- Use component scope for component-to-component relationships.
-+- Use context scope for system-level or cross-system relationships.
-+- Each relationship must reference at least one requirement_id.
-+- Infer bidirectional relationships only when requirement text explicitly describes two-way interaction.
-+
-+## Decision Guidance
-+
-+When a requirement describes data flow, make the data producer the source and consumer the target. When a requirement describes a control action, make the controller the source and controlled entity the target. Skip relationships between entities that are merely co-located in text without an interaction verb.
-+
-+## Workflow
-+
-+1. Review each pair of extracted entities against requirement text.
-+2. Identify interaction verbs connecting entity pairs.
-+3. Determine direction from actor to target.
-+4. Assign diagram scope based on endpoint C4 types.
-+5. Generate relationship id from source and target ids.
-+
-+## Common Gotchas
-+
-+- Do not create relationships for entities that co-occur in text but do not interact.
-+- Do not assume bidirectional unless text explicitly describes both directions.
-+- Ensure both endpoints exist in the entity list before emitting the relationship.
-+
-+## Verification Checklist <!-- tag: relationship_extraction:checklist -->
-+
-+- Every relationship connects two valid entity ids.
-+- Relationship direction matches requirement intent.
-+- Diagram scope is assigned for every relationship.
-+- Each relationship references at least one requirement_id.
-+- No orphan relationships reference missing entities.
-diff --git a/raa/Skills/references/pattern_selection.md b/raa/Skills/references/pattern_selection.md
-new file mode 100644
-index 0000000..eda3085
---- /dev/null
-+++ b/raa/Skills/references/pattern_selection.md
-@@ -0,0 +1,51 @@
-+---
-+name: pattern_selection
-+description: Rules for selecting architectural patterns that match requirement characteristics.
-+metadata:
-+  target_node: raa_b
-+  version: "1.0"
-+---
-+
-+# Pattern Selection
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for matching requirement batches to known architectural patterns. Covers pattern recognition signals, confidence scoring, and pattern-to-C4 mapping.
-+
-+## When to Use
-+
-+Use when a pattern-driven extraction node must classify a requirement batch against a catalog of architectural patterns.
-+
-+## Quick Reference / Rules <!-- tag: pattern_selection:rules -->
-+
-+- Match requirements against known pattern signals before extracting entities.
-+- Prefer patterns with the highest signal count in the batch.
-+- A pattern match requires at least two confirming signals.
-+- Default to layered architecture when no pattern signals are detected.
-+- Record pattern confidence in fragment metadata.
-+- Map matched pattern to expected C4 entity types and relationships.
-+
-+## Decision Guidance
-+
-+When multiple patterns match with similar signal counts, select the most specific pattern. When no pattern exceeds the two-signal threshold, fall back to layered architecture and flag as low confidence. Pattern selection shapes entity expectations but does not override explicit requirement content.
-+
-+## Workflow
-+
-+1. Scan requirement batch for pattern signal keywords.
-+2. Score each known pattern by matching signal count.
-+3. Select the highest-scoring pattern above threshold.
-+4. Record pattern name and confidence in extraction metadata.
-+5. Use pattern expectations to guide entity and relationship extraction.
-+
-+## Common Gotchas
-+
-+- Do not force-fit requirements into a pattern when signals are weak.
-+- Do not ignore requirement content that contradicts the selected pattern.
-+- Pattern selection is guidance, not a constraint on entity extraction.
-+
-+## Verification Checklist <!-- tag: pattern_selection:checklist -->
-+
-+- Selected pattern has at least two confirming signals or is explicit fallback.
-+- Pattern name is recorded in fragment metadata.
-+- Confidence score is recorded with the pattern.
-+- Entity extraction is informed but not constrained by the pattern.
-diff --git a/raa/Skills/references/technology_inference.md b/raa/Skills/references/technology_inference.md
-new file mode 100644
-index 0000000..63885c3
---- /dev/null
-+++ b/raa/Skills/references/technology_inference.md
-@@ -0,0 +1,50 @@
-+---
-+name: technology_inference
-+description: Rules for inferring technology annotations from requirement descriptions.
-+metadata:
-+  target_node: raa_c
-+  version: "1.0"
-+---
-+
-+# Technology Inference
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for inferring technology stack annotations from natural-language requirements. Covers technology keyword detection, default assignments, and confidence levels.
-+
-+## When to Use
-+
-+Use when an extraction node must annotate entities with likely technology choices based on requirement language.
-+
-+## Quick Reference / Rules <!-- tag: technology_inference:rules -->
-+
-+- Infer technology only when requirement text contains explicit technology keywords.
-+- Do not invent technology choices for generic requirement descriptions.
-+- Record technology annotations in entity metadata with a confidence level.
-+- Default to the organization standard stack when requirements imply but do not name a technology.
-+- Flag technology inferences as assumptions in fragment metadata.
-+
-+## Decision Guidance
-+
-+When a requirement names a specific database, message broker, or framework, annotate the entity with that technology. When a requirement describes a need but not a specific technology, either omit the annotation or use the organization default with low confidence. Never infer a technology that contradicts the running model.
-+
-+## Workflow
-+
-+1. Scan requirement text for technology keywords.
-+2. Match keywords to known technology categories.
-+3. Assign technology annotations to relevant entities.
-+4. Record confidence level for each annotation.
-+5. Flag low-confidence inferences as assumptions.
-+
-+## Common Gotchas
-+
-+- Do not infer cloud provider specifics unless explicitly mentioned.
-+- Do not override running-model technology choices without explicit requirement evidence.
-+- Avoid inferring version numbers unless stated in requirements.
-+
-+## Verification Checklist <!-- tag: technology_inference:checklist -->
-+
-+- Each technology annotation has a confidence level.
-+- No technology contradicts the running model.
-+- Inferred technologies are recorded as assumptions when low confidence.
-+- Generic requirements do not receive invented technology choices.
-diff --git a/raa/Skills/references/saam.md b/raa/Skills/references/saam.md
-new file mode 100644
-index 0000000..8b31e0c
---- /dev/null
-+++ b/raa/Skills/references/saam.md
-@@ -0,0 +1,51 @@
-+---
-+name: saam
-+description: SAAM scenario evaluation reference for architecture analysis.
-+metadata:
-+  target_node: raa_a
-+  version: "1.0"
-+---
-+
-+# SAAM (Software Architecture Analysis Method)
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for SAAM-based scenario evaluation. Covers scenario definition, stakeholder prioritization, quality attribute mapping, and interaction analysis.
-+
-+## When to Use
-+
-+Use when RAA-A performs SAAM-first architectural extraction. Apply when evaluating how well a candidate architecture satisfies quality scenarios.
-+
-+## Quick Reference / Rules <!-- tag: saam:rules -->
-+
-+- Define scenarios from requirement text before evaluating architecture.
-+- Each scenario must describe a stimulus, context, and expected response.
-+- Map scenarios to quality attributes from the quality_attributes reference.
-+- Evaluate candidate architecture against each scenario independently.
-+- Record scenario satisfaction as satisfied, partially satisfied, or unsatisfied.
-+- Flag unsatisfied scenarios as open questions with suggested resolutions.
-+
-+## Decision Guidance
-+
-+When a scenario is partially satisfied, extract the gap as a cross-cutting concern. When multiple scenarios conflict, prioritize by stakeholder weight from quality_attributes. SAAM results inform but do not replace C4 structural extraction.
-+
-+## Workflow
-+
-+1. Extract candidate scenarios from requirement batch.
-+2. Map each scenario to relevant quality attributes.
-+3. Evaluate the candidate fragment against each scenario.
-+4. Score satisfaction per scenario.
-+5. Emit cross-cutting concerns for partial or failed scenarios.
-+
-+## Common Gotchas
-+
-+- Do not evaluate scenarios against entities that have not been extracted yet.
-+- Do not treat SAAM results as entity extraction; SAAM evaluates, C4 extracts.
-+- Avoid scenario explosion; one scenario per distinct quality concern.
-+
-+## Verification Checklist <!-- tag: saam:checklist -->
-+
-+- Every scenario has stimulus, context, and response defined.
-+- Each scenario maps to at least one quality attribute.
-+- Satisfaction is recorded for each scenario.
-+- Unsatisfied scenarios generate cross-cutting concerns.
-diff --git a/raa/Skills/references/c4.md b/raa/Skills/references/c4.md
-new file mode 100644
-index 0000000..ff6c006
---- /dev/null
-+++ b/raa/Skills/references/c4.md
-@@ -0,0 +1,52 @@
-+---
-+name: c4
-+description: General C4 model reference for shared metamodel rules.
-+metadata:
-+  target_node: all
-+  version: "1.0"
-+---
-+
-+# C4 Model Reference
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for the C4 architectural model. Covers entity types, relationship rules, diagram scope, and hierarchy constraints used across all RAA extraction nodes.
-+
-+## When to Use
-+
-+Use as the shared metamodel reference for any extraction node that emits C4 entities or relationships.
-+
-+## Quick Reference / Rules <!-- tag: c4:rules -->
-+
-+- C4 defines five entity types: person, system, external_system, container, component.
-+- Every container must declare a parent_system_id referencing a system.
-+- Every component must declare a parent_container_id referencing a container.
-+- Relationships must use container scope for container endpoints.
-+- Relationships must use component scope for component endpoints.
-+- Relationships must use context scope for system-level or external endpoints.
-+- Each entity must reference requirement_ids that justify its existence.
-+
-+## Decision Guidance
-+
-+When an entity could fit multiple C4 levels, default to the higher (more abstract) level. When relationships cross C4 level boundaries, use the deepest common level for scope. Person and external_system entities sit outside the organizational boundary but can still participate in relationships.
-+
-+## Workflow
-+
-+1. Classify each architectural concept into a C4 type.
-+2. Assign parent references according to the type hierarchy.
-+3. Connect entities with directed, scoped relationships.
-+4. Validate hierarchy constraints before emitting the fragment.
-+
-+## Common Gotchas
-+
-+- Do not nest entities inside other entities; use parent references.
-+- Do not assign component scope to a relationship involving a system endpoint.
-+- Running-model entities take precedence over newly extracted duplicates.
-+
-+## Verification Checklist <!-- tag: c4:checklist -->
-+
-+- All containers have a valid parent_system_id.
-+- All components have a valid parent_container_id.
-+- All relationships have correct diagram_scope.
-+- No entity is nested inside another entity.
-+- No duplicate entity ids exist within a fragment.
-diff --git a/raa/Skills/references/quality_attributes.md b/raa/Skills/references/quality_attributes.md
-new file mode 100644
-index 0000000..6293bf9
---- /dev/null
-+++ b/raa/Skills/references/quality_attributes.md
-@@ -0,0 +1,52 @@
-+---
-+name: quality_attributes
-+description: Quality attribute reference for non-functional requirement evaluation.
-+metadata:
-+  target_node: raa_a
-+  version: "1.0"
-+---
-+
-+# Quality Attributes
-+
-+## Product Summary / Definition
-+
-+Authoritative reference for mapping non-functional requirements to quality attribute scenarios. Covers performance, scalability, security, availability, maintainability, and interoperability quality dimensions.
-+
-+## When to Use
-+
-+Use when RAA-A evaluates SAAM scenarios or when any extraction node must weigh quality attribute signals in requirement text.
-+
-+## Quick Reference / Rules <!-- tag: quality_attributes:rules -->
-+
-+- Map each non-functional requirement to exactly one primary quality attribute.
-+- Performance: response time, throughput, resource utilization.
-+- Scalability: horizontal scaling, vertical scaling, elasticity.
-+- Security: authentication, authorization, data protection, audit.
-+- Availability: uptime, fault tolerance, disaster recovery.
-+- Maintainability: modularity, testability, deployability.
-+- Record quality attribute weights in extraction context.
-+
-+## Decision Guidance
-+
-+When a requirement spans multiple quality attributes, select the primary attribute from the dominant concern. Record secondary attributes in entity metadata. Quality weights from the batch context influence scenario prioritization.
-+
-+## Workflow
-+
-+1. Identify non-functional language in each requirement.
-+2. Classify into one of the six quality dimensions.
-+3. Assign weight based on requirement priority.
-+4. Pass quality weights into extraction context.
-+5. Use weights to prioritize scenario evaluation.
-+
-+## Common Gotchas
-+
-+- Do not treat all non-functional requirements as performance.
-+- Do not ignore quality attributes when they are implicit in requirement language.
-+- Avoid double-weighting by mapping one requirement to multiple primary attributes.
-+
-+## Verification Checklist <!-- tag: quality_attributes:checklist -->
-+
-+- Each non-functional requirement maps to one primary quality attribute.
-+- Quality weights are recorded in extraction context.
-+- No requirement maps to more than one primary attribute.
-+- Implicit quality attributes are captured when detectable.
-diff --git a/raa/raa/utils/skill_loader.py b/raa/raa/utils/skill_loader.py
-new file mode 100644
-index 0000000..d2331f7
---- /dev/null
-+++ b/raa/raa/utils/skill_loader.py
-@@ -0,0 +1,252 @@
-+"""Skill reference loading — frontmatter, tag extraction, word-limit validation."""
++++ b/raa/raa/judge/deduplication.py
+@@ -0,0 +1,433 @@
++"""
++Conservative entity deduplication and C4 boundary grouping (Story 2.4).
++
++Pure deterministic engine — no LLM calls, no LangGraph dependency.
++"""
 +from __future__ import annotations
 +
 +import re
-+from pathlib import Path
++from typing import Any
 +
-+import yaml
++from fastembed import TextEmbedding
++from pydantic import ValidationError
 +
-+_SKILLS_DIR = Path(__file__).resolve().parent.parent / "Skills"
-+_REFERENCES_DIR = _SKILLS_DIR / "references"
++from raa.state.models import C4Entity, C4Relationship
++from raa.utils.constants import (
++    DEDUP_GROUP_THRESHOLD_HIGH,
++    DEDUP_GROUP_THRESHOLD_LOW,
++    DEDUP_MERGE_THRESHOLD,
++)
++from raa.utils.embedding_cache import EmbeddingCache, cosine_similarity
 +
-+_TAG_PATTERN = re.compile(r"<!--\s*tag:\s*(\S+)\s*-->")
-+_HEADING_PATTERN = re.compile(r"^(#{1,6})\s")
-+_STATEMENT_SEPARATOR = re.compile(r"\n(?=[\-\*\d+\.]|\|)")
-+
-+_MARKDOWN_STRIP_PATTERNS = [
-+    (re.compile(r"\*\*(.+?)\*\*"), r"\1"),
-+    (re.compile(r"\*(.+?)\*"), r"\1"),
-+    (re.compile(r"__(.+?)__"), r"\1"),
-+    (re.compile(r"_(.+?)_"), r"\1"),
-+    (re.compile(r"~~(.+?)~~"), r"\1"),
-+    (re.compile(r"`{1,3}[^`]*`{1,3}"), ""),
-+    (re.compile(r"\[([^\]]*)\]\([^\)]*\)"), r"\1"),
-+    (re.compile(r"!\[[^\]]*\]\([^\)]*\)"), ""),
-+    (re.compile(r"^\s*[-*+]\s*"), ""),
-+    (re.compile(r"^\s*\[[ x]\]\s*"), ""),
-+    (re.compile(r"^\s*\d+\.\s*"), ""),
-+    (re.compile(r"\|"), " "),
-+    (re.compile(r">\s*"), ""),
-+]
-+
-+MAX_WORDS_PER_STATEMENT = 25
++# Patterns for ID normalization
++_RE_CAMEL_INSERT = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
++_RE_ACRONYM_SPLIT = re.compile(r"(?<=[A-Z])(?=[A-Z][a-z])")
++_RE_SEPARATORS = re.compile(r"[-.\s]+")
++_RE_MULTI_UNDERSCORE = re.compile(r"_+")
 +
 +
-+class SkillLoaderError(Exception):
-+    """Base exception for skill loading errors."""
++def normalize_entity_id(entity_id: str) -> str:
++    """Convert any entity ID format to lowercase snake_case.
 +
-+
-+class SkillTagNotFoundError(SkillLoaderError):
-+    """Requested skill tag does not exist in any reference file."""
-+
-+
-+class DuplicateSkillTagError(SkillLoaderError):
-+    """Same tag found in multiple reference files."""
-+
-+
-+class MalformedSkillFrontmatterError(SkillLoaderError):
-+    """Skill reference file has missing or malformed frontmatter."""
-+
-+
-+class StatementTooLongError(SkillLoaderError):
-+    """A statement in an injected skill section exceeds the word limit."""
-+
-+
-+def _parse_frontmatter(text: str, file_path: Path) -> dict:
-+    """Extract YAML frontmatter from a markdown file.
-+
-+    Returns a dict with at least ``name`` and ``description`` keys.
-+    Raises MalformedSkillFrontmatterError on parse failure.
++    >>> normalize_entity_id("User_Service")
++    'user_service'
++    >>> normalize_entity_id("userService")
++    'user_service'
++    >>> normalize_entity_id("user-service")
++    'user_service'
++    >>> normalize_entity_id("DTOParser")
++    'dto_parser'
 +    """
-+    if not text.startswith("---"):
-+        raise MalformedSkillFrontmatterError(
-+            f"Missing frontmatter in {file_path}: file does not start with '---'"
-+        )
-+    end = text.find("---", 3)
-+    if end == -1:
-+        raise MalformedSkillFrontmatterError(
-+            f"Unclosed frontmatter in {file_path}"
-+        )
-+    raw = text[3:end].strip()
-+    if not raw:
-+        raise MalformedSkillFrontmatterError(
-+            f"Empty frontmatter in {file_path}"
-+        )
-+    try:
-+        data = yaml.safe_load(raw)
-+    except yaml.YAMLError as exc:
-+        raise MalformedSkillFrontmatterError(
-+            f"YAML parse error in {file_path}: {exc}"
-+        ) from exc
-+    if not isinstance(data, dict):
-+        raise MalformedSkillFrontmatterError(
-+            f"Frontmatter in {file_path} is not a mapping"
-+        )
-+    if "name" not in data:
-+        raise MalformedSkillFrontmatterError(
-+            f"Frontmatter in {file_path} missing required 'name' key"
-+        )
-+    if "description" not in data:
-+        raise MalformedSkillFrontmatterError(
-+            f"Frontmatter in {file_path} missing required 'description' key"
-+        )
-+    return data
++    s = entity_id.strip()
++    s = _RE_SEPARATORS.sub("_", s)
++    s = _RE_CAMEL_INSERT.sub("_", s)
++    s = _RE_ACRONYM_SPLIT.sub("_", s)
++    s = _RE_MULTI_UNDERSCORE.sub("_", s.lower())
++    s = re.sub(r"[^a-z0-9_]", "_", s)
++    s = _RE_MULTI_UNDERSCORE.sub("_", s)
++    return s.strip("_")
 +
 +
-+def _strip_markdown(text: str) -> str:
-+    """Remove markdown syntax for word counting."""
-+    result = text
-+    for pattern, replacement in _MARKDOWN_STRIP_PATTERNS:
-+        result = pattern.sub(replacement, result)
-+    return result.strip()
++def _compute_entity_similarity(
++    entity_a: C4Entity,
++    entity_b: C4Entity,
++    cache: EmbeddingCache,
++    model: TextEmbedding,
++) -> float:
++    """Compute cosine similarity between two entity descriptions.
 +
-+
-+def _validate_statements(section_text: str, file_path: Path, tag: str) -> None:
-+    """Validate each statement in the extracted section is <= MAX_WORDS_PER_STATEMENT words.
-+
-+    Statements are separated by line-oriented delimiters (bullets, table rows, etc.).
++    Returns 0.0 if either description is empty/whitespace-only.
 +    """
-+    statements = _STATEMENT_SEPARATOR.split(section_text)
-+    for stmt in statements:
-+        stripped = _strip_markdown(stmt).strip()
-+        if not stripped:
-+            continue
-+        word_count = len(stripped.split())
-+        if word_count > MAX_WORDS_PER_STATEMENT:
-+            raise StatementTooLongError(
-+                f"Statement in {file_path} tag '{tag}' is {word_count} words "
-+                f"(max {MAX_WORDS_PER_STATEMENT}): "
-+                f"\"{stripped[:120]}{'...' if len(stripped) > 120 else ''}\""
++    desc_a = (entity_a.description or "").strip()
++    desc_b = (entity_b.description or "").strip()
++
++    if not desc_a or not desc_b:
++        return 0.0
++
++    hash_a = cache.text_hash(desc_a)
++    hash_b = cache.text_hash(desc_b)
++
++    vec_a = cache.get_cached_vector(entity_a.id, hash_a)
++    if vec_a is None:
++        embeddings = list(model.embed([desc_a]))
++        vec_a = embeddings[0].tolist()
++        cache.store_vector(entity_a.id, hash_a, vec_a)
++
++    vec_b = cache.get_cached_vector(entity_b.id, hash_b)
++    if vec_b is None:
++        embeddings = list(model.embed([desc_b]))
++        vec_b = embeddings[0].tolist()
++        cache.store_vector(entity_b.id, hash_b, vec_b)
++
++    return cosine_similarity(vec_a, vec_b)
++
++
++def _do_ids_overlap(entity_a: C4Entity, entity_b: C4Entity) -> bool:
++    """Check whether two entities share at least one requirement ID."""
++    ids_a = set(entity_a.requirement_ids or [])
++    ids_b = set(entity_b.requirement_ids or [])
++    return bool(ids_a & ids_b)
++
++
++def _union_technology(tech_a: str, tech_b: str) -> str:
++    """Union two technology tag strings with proper formatting.
++
++    Tags are split by comma/semicolon, stripped, deduplicated case-insensitively,
++    sorted, and joined with ", ".
++    """
++    seen: dict[str, str] = {}
++    for tech in (tech_a, tech_b):
++        if tech:
++            for tag in re.split(r"[,;]+", tech):
++                stripped = tag.strip()
++                if stripped:
++                    key = stripped.lower()
++                    if key not in seen:
++                        seen[key] = stripped
++                    elif any(c.isupper() for c in stripped) and not any(c.isupper() for c in seen[key]):
++                        seen[key] = stripped
++    return ", ".join(sorted(seen.values(), key=lambda s: s.lower()))
++
++
++def _merge_entities(entity_a: C4Entity, entity_b: C4Entity) -> C4Entity:
++    """Merge two entities into one.
++
++    Retains the longer description, unions technology tags and requirement IDs.
++    The canonical entity ID is the one with more requirement_ids (tie-break: entity_a).
++    """
++    canonical = (
++        entity_a
++        if len(entity_a.requirement_ids or []) >= len(entity_b.requirement_ids or [])
++        else entity_b
++    )
++
++    description = (
++        entity_a.description
++        if len(entity_a.description or "") >= len(entity_b.description or "")
++        else entity_b.description
++    )
++
++    technology = _union_technology(entity_a.technology or "", entity_b.technology or "")
++
++    requirement_ids = sorted(
++        set(entity_a.requirement_ids or []) | set(entity_b.requirement_ids or [])
++    )
++
++    return C4Entity(
++        id=canonical.id,
++        name=canonical.name,
++        description=description,
++        c4_type=canonical.c4_type,
++        technology=technology,
++        parent_system_id=canonical.parent_system_id,
++        parent_container_id=canonical.parent_container_id,
++        requirement_ids=requirement_ids,
++        metadata={**entity_a.metadata, **entity_b.metadata},
++    )
++
++
++def _rewrite_relationship_ids(
++    relationships: list[C4Relationship],
++    old_id: str,
++    new_id: str,
++) -> list[C4Relationship]:
++    """Rewrite source_id and target_id from old_id to new_id.
++
++    Returns new list — never mutates inputs.
++    """
++    rewritten: list[C4Relationship] = []
++    for rel in relationships:
++        new_source = new_id if rel.source_id == old_id else rel.source_id
++        new_target = new_id if rel.target_id == old_id else rel.target_id
++        meta = dict(rel.metadata) if rel.metadata else {}
++        rewritten.append(
++            C4Relationship(
++                id=rel.id,
++                source_id=new_source,
++                target_id=new_target,
++                description=rel.description,
++                relationship_type=rel.relationship_type,
++                diagram_scope=rel.diagram_scope,
++                metadata=meta,
 +            )
++        )
++    return rewritten
 +
 +
-+def _find_tag_in_file(file_path: Path, tag: str) -> tuple[int, int] | None:
-+    """Return (heading_level, heading_line_index) if tag found in file, else None."""
-+    with open(file_path) as f:
-+        lines = f.readlines()
++def _create_boundary_group(
++    entity_a_id: str,
++    entity_b_id: str,
++    similarity: float,
++) -> dict:
++    """Create a boundary group entry for two moderately-similar entities."""
++    return {
++        "group_id": f"bg_{entity_a_id}_{entity_b_id}",
++        "entity_ids": sorted([entity_a_id, entity_b_id]),
++        "similarity": round(similarity, 4),
++        "rationale": (
++            f"Entities have moderate semantic similarity ({similarity:.2f}) "
++            "suggesting shared deployment context but distinct C4 responsibilities."
++        ),
++    }
 +
-+    for i, line in enumerate(lines):
-+        match = _TAG_PATTERN.search(line)
-+        if match and match.group(1) == tag:
-+            heading_match = _HEADING_PATTERN.match(line)
-+            if not heading_match:
-+                continue
-+            level = len(heading_match.group(1))
-+            return level, i
++
++def _check_hierarchy_mismatch(entity_a: C4Entity, entity_b: C4Entity) -> dict | None:
++    """Check if two entities have different parent system or container IDs."""
++    mismatches = []
++    if entity_a.parent_system_id != entity_b.parent_system_id:
++        mismatches.append(f"parent_system_id ('{entity_a.parent_system_id}' vs '{entity_b.parent_system_id}')")
++    if entity_a.parent_container_id != entity_b.parent_container_id:
++        mismatches.append(f"parent_container_id ('{entity_a.parent_container_id}' vs '{entity_b.parent_container_id}')")
++
++    if mismatches:
++        canonical_id = (
++            entity_a.id
++            if len(entity_a.requirement_ids or []) >= len(entity_b.requirement_ids or [])
++            else entity_b.id
++        )
++        return {
++            "question_type": "change_risk",
++            "entity_a_id": entity_a.id,
++            "entity_b_id": entity_b.id,
++            "description": (
++                f"Merged entities '{entity_a.name}' and '{entity_b.name}' have mismatching C4 parent hierarchy: "
++                f"{', '.join(mismatches)}. Canonical entity '{canonical_id}' parent hierarchy will be used."
++            ),
++            "source": "deduplication",
++            "severity": "medium",
++        }
 +    return None
 +
 +
-+def _extract_section(file_path: Path, tag: str) -> str:
-+    """Extract the tagged section from a reference file.
++def _to_entity(obj: Any) -> C4Entity:
++    """Coerce a dict or C4Entity into a C4Entity using Pydantic validation."""
++    if isinstance(obj, C4Entity):
++        return obj
++    if isinstance(obj, dict):
++        try:
++            return C4Entity.model_validate(obj)
++        except ValidationError as e:
++            raise ValueError(f"Failed to validate C4Entity: {e}") from e
++    raise TypeError(f"Cannot coerce {type(obj)} to C4Entity")
 +
-+    Finds the heading containing ``<!-- tag: <tag> -->``, then collects all lines
-+    until the next heading of the same or higher level (or EOF).
++
++def _to_relationship(obj: Any) -> C4Relationship:
++    """Coerce a dict or C4Relationship into a C4Relationship using Pydantic validation."""
++    if isinstance(obj, C4Relationship):
++        return obj
++    if isinstance(obj, dict):
++        try:
++            return C4Relationship.model_validate(obj)
++        except ValidationError as e:
++            raise ValueError(f"Failed to validate C4Relationship: {e}") from e
++    raise TypeError(f"Cannot coerce {type(obj)} to C4Relationship")
++
++
++def deduplicate_and_merge_fragment(
++    primary_fragment: dict,
++    running_model: dict,
++    cache: EmbeddingCache | None,
++    model: TextEmbedding | None,
++) -> tuple[dict, list[dict], list[dict]]:
++    """Process primary fragment against running model with dedup, merge, and boundary grouping.
++
++    Args:
++        primary_fragment: Dict with ``entities`` and ``relationships`` (ArchFragment-like).
++        running_model: Current arch_model dict with ``entities``, ``relationships``,
++            and optionally ``boundary_groups``.
++        cache: EmbeddingCache for vector lookup/storage. When ``None``, similarity-based
++            dedup and boundary grouping are skipped; only exact normalized-ID matching is performed.
++        model: FastEmbed TextEmbedding for on-the-fly embedding generation. Only used
++            when ``cache`` is not ``None``.
++
++    Returns:
++        Tuple of (updated_running_model, open_questions, merge_log).
 +    """
-+    with open(file_path) as f:
-+        lines = f.readlines()
++    # Parse primary fragment
++    pf_entities = [_to_entity(e) for e in (primary_fragment.get("entities") or [])]
++    pf_relationships = [
++        _to_relationship(r) for r in (primary_fragment.get("relationships") or [])
++    ]
 +
-+    tag_line_idx = None
-+    heading_level = 0
-+    for i, line in enumerate(lines):
-+        match = _TAG_PATTERN.search(line)
-+        if match and match.group(1) == tag:
-+            heading_match = _HEADING_PATTERN.match(line)
-+            if heading_match:
-+                heading_level = len(heading_match.group(1))
-+                tag_line_idx = i
++    # Parse running model
++    rm_entities = [_to_entity(e) for e in (running_model.get("entities") or [])]
++    rm_relationships = [
++        _to_relationship(r) for r in (running_model.get("relationships") or [])
++    ]
++
++    boundary_groups: list[dict] = list(running_model.get("boundary_groups") or [])
++    open_questions: list[dict] = []
++    merge_log: list[dict] = []
++
++    # Map old entity ID → canonical entity ID for relationship rewriting
++    id_mapping: dict[str, str] = {}
++
++    has_model = cache is not None and model is not None
++
++    for pf_entity in pf_entities:
++        norm_pf_id = normalize_entity_id(pf_entity.id)
++        merged = False
++
++        temp_boundary_groups: list[dict] = []
++        temp_open_questions: list[dict] = []
++
++        for i, rm_entity in enumerate(rm_entities):
++            norm_rm_id = normalize_entity_id(rm_entity.id)
++
++            # Exact normalized-ID match → merge immediately
++            if norm_pf_id == norm_rm_id:
++                # Check parent hierarchy mismatch
++                hierarchy_q = _check_hierarchy_mismatch(pf_entity, rm_entity)
++                if hierarchy_q:
++                    open_questions.append(hierarchy_q)
++
++                merged_entity = _merge_entities(pf_entity, rm_entity)
++                rm_entities[i] = merged_entity
++                id_mapping[pf_entity.id] = merged_entity.id
++                id_mapping[rm_entity.id] = merged_entity.id
++                merge_log.append({
++                    "merged_entity_id": merged_entity.id,
++                    "source_entity_ids": [pf_entity.id, rm_entity.id],
++                    "merge_type": "exact_id",
++                })
++                merged = True
 +                break
 +
-+    if tag_line_idx is None:
-+        return ""  # should not happen after _find_tag_in_file
-+
-+    # Collect from tag line to next heading of same or higher level
-+    result_lines = [lines[tag_line_idx]]
-+    for j in range(tag_line_idx + 1, len(lines)):
-+        h_match = _HEADING_PATTERN.match(lines[j])
-+        if h_match and len(h_match.group(1)) <= heading_level:
-+            break
-+        result_lines.append(lines[j])
-+
-+    return "".join(result_lines)
-+
-+
-+def _find_reference_file(tag: str) -> Path:
-+    """Resolve a tag to its reference file path.
-+
-+    Tag format: ``<file_prefix>:<section>``. The file is
-+    ``<file_prefix>.md`` in the references directory.
-+    """
-+    if ":" not in tag:
-+        raise SkillTagNotFoundError(
-+            f"Tag '{tag}' does not follow the 'file_prefix:section' convention"
-+        )
-+    file_prefix = tag.split(":", 1)[0]
-+    file_path = _REFERENCES_DIR / f"{file_prefix}.md"
-+    return file_path
-+
-+
-+def _collect_all_tags() -> dict[str, Path]:
-+    """Scan all reference files and return {tag: file_path}."""
-+    tags: dict[str, Path] = {}
-+    if not _REFERENCES_DIR.is_dir():
-+        return tags
-+    for ref_file in sorted(_REFERENCES_DIR.glob("*.md")):
-+        with open(ref_file) as f:
-+            for line in f:
-+                match = _TAG_PATTERN.search(line)
-+                if match:
-+                    found_tag = match.group(1)
-+                    if found_tag in tags:
-+                        raise DuplicateSkillTagError(
-+                            f"Duplicate tag '{found_tag}' found in "
-+                            f"{tags[found_tag]} and {ref_file}"
-+                        )
-+                    tags[found_tag] = ref_file
-+    return tags
-+
-+
-+def load_skill_section(tag: str) -> str:
-+    """Load a tagged section from skill reference files.
-+
-+    Args:
-+        tag: Tag in ``file_prefix:section`` format (e.g. ``entity_extraction:rules``).
-+
-+    Returns:
-+        Extracted markdown section content (includes the tagged heading).
-+
-+    Raises:
-+        SkillTagNotFoundError: Tag not found in any reference file.
-+        DuplicateSkillTagError: Tag appears in multiple reference files.
-+        StatementTooLongError: A statement in the section exceeds the word limit.
-+    """
-+    file_path = _find_reference_file(tag)
-+    if not file_path.is_file():
-+        raise SkillTagNotFoundError(
-+            f"Skill reference file not found: {file_path} (tag: '{tag}')"
-+        )
-+
-+    # Parse frontmatter to validate the file
-+    with open(file_path) as f:
-+        full_text = f.read()
-+    _parse_frontmatter(full_text, file_path)
-+
-+    # Check tag exists in the correct file
-+    found = _find_tag_in_file(file_path, tag)
-+    if found is None:
-+        # Also check if tag exists in a DIFFERENT file (wrong file_prefix)
-+        all_tags = _collect_all_tags()
-+        if tag in all_tags:
-+            actual_file = all_tags[tag]
-+            actual_prefix = actual_file.stem
-+            raise SkillTagNotFoundError(
-+                f"Tag '{tag}' found in '{actual_file}', not in '{file_path}'. "
-+                f"Use tag prefix '{actual_prefix}:' instead of "
-+                f"'{tag.split(':', 1)[0]}:'."
-+            )
-+        raise SkillTagNotFoundError(
-+            f"Tag '{tag}' not found in {file_path}"
-+        )
-+
-+    section = _extract_section(file_path, tag)
-+    _validate_statements(section, file_path, tag)
-+    return section
-diff --git a/raa/tests/raa/unit/test_skill_loader.py b/raa/tests/raa/unit/test_skill_loader.py
-new file mode 100644
-index 0000000..526843f
---- /dev/null
-+++ b/raa/tests/raa/unit/test_skill_loader.py
-@@ -0,0 +1,288 @@
-+"""Unit tests for skill_loader — frontmatter, tag extraction, word-limit validation."""
-+from __future__ import annotations
-+
-+import re
-+from pathlib import Path
-+
-+import pytest
-+
-+from raa.utils.skill_loader import (
-+    _SKILLS_DIR,
-+    _REFERENCES_DIR,
-+    _TAG_PATTERN,
-+    DuplicateSkillTagError,
-+    MalformedSkillFrontmatterError,
-+    SkillTagNotFoundError,
-+    StatementTooLongError,
-+    _collect_all_tags,
-+    _parse_frontmatter,
-+    _validate_statements,
-+    load_skill_section,
-+)
-+
-+REQUIRED_SECTIONS = [
-+    "Product Summary / Definition",
-+    "When to Use",
-+    "Quick Reference / Rules",
-+    "Decision Guidance",
-+    "Workflow",
-+    "Common Gotchas",
-+    "Verification Checklist",
-+]
-+
-+REQUIRED_TAGS = [
-+    "c4_level_mapping:rules",
-+    "c4_level_mapping:checklist",
-+    "entity_extraction:rules",
-+    "entity_extraction:checklist",
-+    "relationship_extraction:rules",
-+    "relationship_extraction:checklist",
-+    "pattern_selection:rules",
-+    "pattern_selection:checklist",
-+    "technology_inference:rules",
-+    "technology_inference:checklist",
-+]
-+
-+
-+# ── Task 6.1: SKILL.md and reference files exist ───────────────────────────
-+
-+
-+class TestSkillBundleExists:
-+    def test_skill_md_exists(self):
-+        assert (_SKILLS_DIR / "SKILL.md").is_file()
-+
-+    def test_references_dir_exists(self):
-+        assert _REFERENCES_DIR.is_dir()
-+
-+    @pytest.mark.parametrize("filename", [
-+        "c4_level_mapping.md",
-+        "entity_extraction.md",
-+        "relationship_extraction.md",
-+        "pattern_selection.md",
-+        "technology_inference.md",
-+        "saam.md",
-+        "c4.md",
-+        "quality_attributes.md",
-+    ])
-+    def test_reference_file_exists(self, filename):
-+        path = _REFERENCES_DIR / filename
-+        assert path.is_file(), f"Missing: {path}"
-+
-+
-+# ── Task 6.2-6.3: Frontmatter and required sections ────────────────────────
-+
-+
-+class TestFrontmatterAndSections:
-+
-+    @pytest.mark.parametrize("filename", [
-+        "c4_level_mapping.md",
-+        "entity_extraction.md",
-+        "relationship_extraction.md",
-+        "pattern_selection.md",
-+        "technology_inference.md",
-+        "saam.md",
-+        "c4.md",
-+        "quality_attributes.md",
-+    ])
-+    def test_reference_has_valid_frontmatter(self, filename):
-+        path = _REFERENCES_DIR / filename
-+        with open(path) as f:
-+            text = f.read()
-+        fm = _parse_frontmatter(text, path)
-+        assert "name" in fm
-+        assert "description" in fm
-+        assert isinstance(fm.get("metadata"), dict) or fm.get("metadata") is None
-+        if fm.get("metadata"):
-+            assert "target_node" in fm["metadata"] or "target_node" not in fm["metadata"]
-+            assert "version" in fm["metadata"] or "version" not in fm["metadata"]
-+
-+    @pytest.mark.parametrize("filename", [
-+        "c4_level_mapping.md",
-+        "entity_extraction.md",
-+        "relationship_extraction.md",
-+        "pattern_selection.md",
-+        "technology_inference.md",
-+        "saam.md",
-+        "c4.md",
-+        "quality_attributes.md",
-+    ])
-+    def test_reference_has_required_sections(self, filename):
-+        path = _REFERENCES_DIR / filename
-+        with open(path) as f:
-+            text = f.read()
-+        for section in REQUIRED_SECTIONS:
-+            assert section in text, f"Missing section '{section}' in {filename}"
-+
-+
-+# ── Task 6.4: load_skill_section returns only the tagged section ────────────
-+
-+
-+class TestLoadSkillSection:
-+    def test_load_rules_returns_only_tagged_section(self):
-+        section = load_skill_section("entity_extraction:rules")
-+        assert "Quick Reference / Rules" in section
-+        assert "## Decision Guidance" not in section
-+        assert "## Verification Checklist" not in section
-+
-+    def test_load_checklist_returns_only_tagged_section(self):
-+        section = load_skill_section("entity_extraction:checklist")
-+        assert "Verification Checklist" in section
-+        assert "## Product Summary / Definition" not in section
-+        assert "## Quick Reference / Rules" not in section
-+
-+    def test_load_c4_rules_returns_only_tagged_section(self):
-+        section = load_skill_section("c4:rules")
-+        assert "Quick Reference / Rules" in section
-+        assert "## Decision Guidance" not in section
-+
-+    @pytest.mark.parametrize("tag", [
-+        "c4_level_mapping:rules",
-+        "c4_level_mapping:checklist",
-+        "entity_extraction:rules",
-+        "entity_extraction:checklist",
-+        "relationship_extraction:rules",
-+        "relationship_extraction:checklist",
-+        "pattern_selection:rules",
-+        "pattern_selection:checklist",
-+        "technology_inference:rules",
-+        "technology_inference:checklist",
-+    ])
-+    def test_all_required_tags_load(self, tag):
-+        section = load_skill_section(tag)
-+        assert len(section) > 0
-+
-+
-+# ── Task 6.5: Duplicate tags raise ─────────────────────────────────────────
-+
-+
-+class TestDuplicateTagDetection:
-+    def test_no_duplicate_tags_in_bundle(self):
-+        tags = _collect_all_tags()
-+        # The function itself raises on duplicates, so reaching here means
-+        # no duplicates. Verify all required tags are present.
-+        for tag in REQUIRED_TAGS:
-+            assert tag in tags, f"Required tag '{tag}' not found in bundle"
-+
-+
-+# ── Task 6.6: Missing tags raise ───────────────────────────────────────────
-+
-+
-+class TestMissingTagErrors:
-+    def test_missing_tag_raises_clear_error(self):
-+        with pytest.raises(SkillTagNotFoundError) as exc_info:
-+            load_skill_section("nonexistent:rules")
-+        assert "nonexistent" in str(exc_info.value)
-+
-+    def test_wrong_file_prefix_raises_helpful_error(self):
-+        # "entity_extraction:rules" belongs to entity_extraction.md.
-+        # Using prefix "pattern_selection" with the wrong section name from
-+        # another file should raise — no tag named "pattern_selection:rules"
-+        # but "entity_extraction:rules" doesn't exist in pattern_selection.md.
-+        # Instead, try a genuinely wrong file_prefix with a real section name:
-+        with pytest.raises(SkillTagNotFoundError) as exc_info:
-+            load_skill_section("saam:entity_extraction_checklist")
-+        assert "saam" in str(exc_info.value)
-+
-+    def test_missing_reference_file_raises(self):
-+        with pytest.raises(SkillTagNotFoundError):
-+            load_skill_section("no_such_file:rules")
-+
-+    def test_tag_no_colon_raises(self):
-+        with pytest.raises(SkillTagNotFoundError):
-+            load_skill_section("notag")
-+
-+    def test_tag_in_wrong_file_raises_helpful_error(self):
-+        # "entity_extraction:rules" belongs to entity_extraction.md
-+        # Try using a different file prefix with a real section
-+        with pytest.raises(SkillTagNotFoundError) as exc_info:
-+            load_skill_section("c4:entity_extraction_rules_tag")
-+        assert "c4" in str(exc_info.value)
-+
-+
-+# ── Task 6.7: Word-limit validation ────────────────────────────────────────
-+
-+
-+class TestWordLimitValidation:
-+    def test_short_statements_pass_validation(self):
-+        section = "## Test\n- Short statement here.\n- Another short one."
-+        _validate_statements(section, Path("/fake/test.md"), "test:tag")
-+
-+    def test_overlong_statement_raises(self):
-+        words = "word " * 26  # 26 words
-+        section = f"## Test\n- {words.strip()}."
-+        with pytest.raises(StatementTooLongError) as exc_info:
-+            _validate_statements(section, Path("/fake/test.md"), "test:tag")
-+        assert "26 words" in str(exc_info.value)
-+        assert "test:tag" in str(exc_info.value)
-+        assert "/fake/test.md" in str(exc_info.value)
-+
-+    def test_exactly_25_words_passes(self):
-+        words = "word " * 25
-+        section = f"## Test\n- {words.strip()}."
-+        _validate_statements(section, Path("/fake/test.md"), "test:tag")
-+
-+    def test_markdown_formatting_is_stripped_before_counting(self):
-+        # "**bold** italic `code`" → "bold italic" = 2 words
-+        section = "## Test\n- **bold** *italic* `code`."
-+        _validate_statements(section, Path("/fake/test.md"), "test:tag")
-+
-+    def test_table_row_validated(self):
-+        words = "word " * 26
-+        section = f"## Test\n| header |\n| {words.strip()} |"
-+        with pytest.raises(StatementTooLongError):
-+            _validate_statements(section, Path("/fake/test.md"), "test:tag")
-+
-+    def test_checklist_item_validated(self):
-+        words = "word " * 26
-+        section = f"## Test\n- [ ] {words.strip()}."
-+        with pytest.raises(StatementTooLongError):
-+            _validate_statements(section, Path("/fake/test.md"), "test:tag")
-+
-+    def test_all_bundle_sections_pass_word_limit(self):
-+        for tag in REQUIRED_TAGS:
-+            section = load_skill_section(tag)
-+            # Should not raise — validation happens inside load_skill_section
-+            assert len(section) > 0
-+
-+
-+# ── Frontmatter error handling ─────────────────────────────────────────────
-+
-+
-+class TestFrontmatterErrors:
-+    def test_missing_frontmatter_raises(self):
-+        text = "# No frontmatter here\nJust content."
-+        with pytest.raises(MalformedSkillFrontmatterError, match="does not start with"):
-+            _parse_frontmatter(text, Path("/fake/bad.md"))
-+
-+    def test_unclosed_frontmatter_raises(self):
-+        text = "---\nname: test\n"
-+        with pytest.raises(MalformedSkillFrontmatterError, match="Unclosed"):
-+            _parse_frontmatter(text, Path("/fake/bad.md"))
-+
-+    def test_empty_frontmatter_raises(self):
-+        text = "---\n---\ncontent"
-+        with pytest.raises(MalformedSkillFrontmatterError, match="Empty"):
-+            _parse_frontmatter(text, Path("/fake/bad.md"))
-+
-+    def test_missing_name_raises(self):
-+        text = "---\ndescription: A test skill.\n---\ncontent"
-+        with pytest.raises(MalformedSkillFrontmatterError, match="missing required 'name'"):
-+            _parse_frontmatter(text, Path("/fake/bad.md"))
-+
-+    def test_missing_description_raises(self):
-+        text = "---\nname: test\n---\ncontent"
-+        with pytest.raises(MalformedSkillFrontmatterError, match="missing required 'description'"):
-+            _parse_frontmatter(text, Path("/fake/bad.md"))
-+
-+
-+# ── Tag extraction determinism ─────────────────────────────────────────────
-+
-+
-+class TestTagExtraction:
-+    def test_tag_pattern_matches_expected_formats(self):
-+        assert _TAG_PATTERN.search("<!-- tag: entity_extraction:rules -->")
-+        assert _TAG_PATTERN.search("<!-- tag: c4:checklist -->")
-+        assert _TAG_PATTERN.search("<!--tag: saam:rules-->")
-+
-+    def test_tag_pattern_does_not_match_plain_comments(self):
-+        assert _TAG_PATTERN.search("<!-- just a comment -->") is None
-diff --git a/raa/tests/raa/unit/test_prompt_loader.py b/raa/tests/raa/unit/test_prompt_loader.py
-new file mode 100644
-index 0000000..b05b550
---- /dev/null
-+++ b/raa/tests/raa/unit/test_prompt_loader.py
-@@ -0,0 +1,204 @@
-+"""Unit tests for prompt_loader — mustache rendering and skill injection."""
-+from __future__ import annotations
-+
-+import tempfile
-+from pathlib import Path
-+
-+import pytest
-+
-+from raa.utils.prompt_loader import (
-+    _PROMPTS_DIR,
-+    SkillContextKeyCollisionError,
-+    load_prompt,
-+)
-+
-+
-+# ── Task 6.9: Normal mustache rendering still works ────────────────────────
-+
-+
-+class TestNormalMustacheRendering:
-+    def test_renders_simple_variables(self):
-+        # Use the entity_extraction template since it exists but test base behavior
-+        result = load_prompt("entity_extraction.md", {
-+            "batch_id": "B123",
-+            "reduced_confidence": "True",
-+            "running_model": '{"systems":[]}',
-+            "requirements": "[]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+        })
-+        assert "B123" in result
-+        assert "True" in result
-+
-+    def test_variable_interpolation_in_template(self):
-+        result = load_prompt("entity_extraction.md", {
-+            "batch_id": "SPECIAL_BATCH",
-+            "reduced_confidence": "False",
-+            "running_model": "{}",
-+            "requirements": "[R1, R2]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+        })
-+        assert "SPECIAL_BATCH" in result
-+        assert "[R1, R2]" in result
-+
-+
-+# ── Task 6.10: Skill placeholder injection ─────────────────────────────────
-+
-+
-+class TestSkillPlaceholderInjection:
-+    def test_entity_extraction_rules_injected(self):
-+        result = load_prompt("entity_extraction.md", {
-+            "batch_id": "B",
-+            "reduced_confidence": "False",
-+            "running_model": "{}",
-+            "requirements": "[]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+        })
-+        assert "Quick Reference / Rules" in result
-+        assert "entity_extraction" in result.lower() or "entity" in result.lower()
-+
-+    def test_saam_prompt_has_c4_rules_injected(self):
-+        result = load_prompt("saam_analysis.md", {
-+            "batch_id": "B",
-+            "reduced_confidence": "False",
-+            "running_model": "{}",
-+            "requirements": "[]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+        })
-+        assert "C4 defines five entity types" in result
-+
-+    def test_pattern_matching_prompt_has_pattern_rules_injected(self):
-+        result = load_prompt("pattern_matching.md", {
-+            "batch_id": "B",
-+            "reduced_confidence": "False",
-+            "running_model": "{}",
-+            "requirements": "[]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+        })
-+        assert "Quick Reference / Rules" in result
-+
-+    def test_skill_comment_is_not_in_output(self):
-+        """The {{! skill: ... }} declarations must not appear in rendered output."""
-+        result = load_prompt("entity_extraction.md", {
-+            "batch_id": "B",
-+            "reduced_confidence": "False",
-+            "running_model": "{}",
-+            "requirements": "[]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+        })
-+        assert "{{! skill:" not in result
-+        assert "skill:" not in result.split("{{!")[0] if "{{!" in result else True
-+
-+    def test_triple_mustache_variables_resolved(self):
-+        result = load_prompt("entity_extraction.md", {
-+            "batch_id": "B",
-+            "reduced_confidence": "False",
-+            "running_model": "{}",
-+            "requirements": "[]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+        })
-+        assert "{{{c4_rules}}}" not in result
-+        assert "{{{entity_extraction_rules}}}" not in result
-+
-+
-+# ── Task 6.11: Context key collision ────────────────────────────────────────
-+
-+
-+class TestContextKeyCollision:
-+    def test_collision_with_c4_rules_raises(self):
-+        with pytest.raises(SkillContextKeyCollisionError) as exc_info:
-+            load_prompt("entity_extraction.md", {
-+                "batch_id": "B",
-+                "reduced_confidence": "False",
-+                "running_model": "{}",
-+                "requirements": "[]",
-+                "bridge_requirements": "[]",
-+                "quality_weights": "{}",
-+                "c4_rules": "EXPLICIT",
-+            })
-+        assert "c4_rules" in str(exc_info.value)
-+
-+    def test_collision_with_entity_extraction_rules_raises(self):
-+        with pytest.raises(SkillContextKeyCollisionError) as exc_info:
-+            load_prompt("entity_extraction.md", {
-+                "batch_id": "B",
-+                "reduced_confidence": "False",
-+                "running_model": "{}",
-+                "requirements": "[]",
-+                "bridge_requirements": "[]",
-+                "quality_weights": "{}",
-+                "entity_extraction_rules": "custom",
-+            })
-+        assert "entity_extraction_rules" in str(exc_info.value)
-+
-+    def test_non_colliding_extra_keys_ok(self):
-+        result = load_prompt("entity_extraction.md", {
-+            "batch_id": "B",
-+            "reduced_confidence": "False",
-+            "running_model": "{}",
-+            "requirements": "[]",
-+            "bridge_requirements": "[]",
-+            "quality_weights": "{}",
-+            "extra_context": "safe value",
-+        })
-+        assert "safe value" not in result  # not used in template, but no error
-+
-+
-+# ── File not found errors ──────────────────────────────────────────────────
-+
-+
-+class TestFileNotFoundErrors:
-+    def test_missing_prompt_template_raises(self):
-+        with pytest.raises(FileNotFoundError) as exc_info:
-+            load_prompt("no_such_template.md", {})
-+        assert "no_such_template.md" in str(exc_info.value)
-+
-+    def test_missing_prompt_template_mentions_path(self):
-+        with pytest.raises(FileNotFoundError) as exc_info:
-+            load_prompt("ghost.md", {})
-+        assert "Prompt template not found" in str(exc_info.value)
-+
-+
-+# ── Task 6.12: Regression — all strategy prompts render ────────────────────
-+
-+
-+class TestAllPromptsRender:
-+    @pytest.mark.parametrize("template_name", [
-+        "saam_analysis.md",
-+        "pattern_matching.md",
-+        "entity_extraction.md",
-+    ])
-+    def test_prompt_renders_with_representative_context(self, template_name):
-+        context = {
-+            "batch_id": "batch_regression_1",
-+            "reduced_confidence": "False",
-+            "running_model": "{'systems': [{'id': 'sys1', 'name': 'Core'}], "
-+                             "'entities': [{'id': 'sys1', 'name': 'Core', "
-+                             "'c4_type': 'system'}]}",
-+            "requirements": (
-+                "[{'id': 'REQ-1', 'text': 'The system shall provide "
-+                "a REST API for order processing.'}, "
-+                "{'id': 'REQ-2', 'text': 'The system shall store orders "
-+                "in a relational database.'}]"
-+            ),
-+            "bridge_requirements": (
-+                "[{'id': 'REQ-0', 'text': 'The system shall integrate "
-+                "with external payment gateway.'}]"
-+            ),
-+            "quality_weights": (
-+                "{'performance': 0.3, 'security': 0.4, "
-+                "'availability': 0.2, 'maintainability': 0.1}"
-+            ),
-+        }
-+        result = load_prompt(template_name, context)
-+        assert len(result) > 0
-+        assert "batch_regression_1" in result
-+        assert "REQ-1" in result
-+        # All three should have skill-injected content
-+        assert "C4 defines" in result or "## C4 Hierarchy Rules" in result
-diff --git a/raa/raa/utils/prompt_loader.py b/raa/raa/utils/prompt_loader.py
-new file mode 100644
-index 0000000..ddd290a
---- /dev/null
-+++ b/raa/raa/utils/prompt_loader.py
-@@ -0,0 +1,60 @@
-+"""Prompt template loader using chevron mustache rendering with skill injection."""
-+from __future__ import annotations
-+
-+import re
-+from pathlib import Path
-+
-+import chevron
-+
-+from raa.utils.skill_loader import load_skill_section
-+
-+_PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
-+
-+_SKILL_DECL_PATTERN = re.compile(
-+    r"\{\{!\s*skill:\s*(\S+)\s+as\s+(\S+)\s*\}\}"
-+)
-+
-+
-+class SkillContextKeyCollisionError(Exception):
-+    """Skill injection would overwrite an explicit caller-provided context key."""
-+
-+
-+def load_prompt(template_name: str, context: dict) -> str:
-+    """Load a mustache template from raa/prompts/ and render with context.
-+
-+    Skill declarations in the template (``{{! skill: <tag> as <key> }}``)
-+    are resolved via ``skill_loader`` and injected into the render context
-+    before calling ``chevron.render()``.
-+
-+    Args:
-+        template_name: Filename without path (e.g. ``"saam_analysis.md"``).
-+        context: Dict of template variables.
-+
-+    Returns:
-+        Rendered prompt string.
-+
-+    Raises:
-+        FileNotFoundError: Template file not found.
-+        SkillContextKeyCollisionError: A skill key would overwrite a caller key.
-+    """
-+    template_path = _PROMPTS_DIR / template_name
-+    if not template_path.is_file():
-+        raise FileNotFoundError(f"Prompt template not found: {template_path}")
-+    with open(template_path) as f:
-+        template = f.read()
-+
-+    # Resolve skill declarations
-+    declarations = _SKILL_DECL_PATTERN.findall(template)
-+    if declarations:
-+        render_context = dict(context)
-+        for tag, key in declarations:
-+            if key in render_context:
-+                raise SkillContextKeyCollisionError(
-+                    f"Skill injection key '{key}' (tag: '{tag}') would overwrite "
-+                    f"an explicit context key. Rename the 'as' variable in the "
-+                    f"template or remove the conflicting context key."
++            # Similarity-based dedup and boundary grouping — only when model available
++            if not has_model:
++                continue
++
++            similarity = _compute_entity_similarity(pf_entity, rm_entity, cache, model)
++
++            if similarity >= DEDUP_MERGE_THRESHOLD and _do_ids_overlap(
++                pf_entity, rm_entity
++            ):
++                # Check parent hierarchy mismatch
++                hierarchy_q = _check_hierarchy_mismatch(pf_entity, rm_entity)
++                if hierarchy_q:
++                    open_questions.append(hierarchy_q)
++
++                merged_entity = _merge_entities(pf_entity, rm_entity)
++                rm_entities[i] = merged_entity
++                id_mapping[pf_entity.id] = merged_entity.id
++                id_mapping[rm_entity.id] = merged_entity.id
++                merge_log.append({
++                    "merged_entity_id": merged_entity.id,
++                    "source_entity_ids": [pf_entity.id, rm_entity.id],
++                    "merge_type": "similarity",
++                })
++                merged = True
++                break
++
++            if DEDUP_GROUP_THRESHOLD_LOW <= similarity < DEDUP_GROUP_THRESHOLD_HIGH:
++                bg = _create_boundary_group(pf_entity.id, rm_entity.id, similarity)
++                temp_boundary_groups.append(bg)
++
++                # Update metadata
++                bg_id = bg["group_id"]
++                pf_entity.metadata["boundary_group_id"] = bg_id
++
++                new_rm_metadata = dict(rm_entity.metadata)
++                new_rm_metadata["boundary_group_id"] = bg_id
++                rm_entities[i] = C4Entity(
++                    id=rm_entity.id,
++                    name=rm_entity.name,
++                    description=rm_entity.description,
++                    c4_type=rm_entity.c4_type,
++                    technology=rm_entity.technology,
++                    parent_system_id=rm_entity.parent_system_id,
++                    parent_container_id=rm_entity.parent_container_id,
++                    requirement_ids=rm_entity.requirement_ids,
++                    metadata=new_rm_metadata,
 +                )
-+            render_context[key] = load_skill_section(tag)
-+        return chevron.render(template, render_context)
 +
-+    return chevron.render(template, context)
-diff --git a/raa/raa/prompts/saam_analysis.md b/raa/raa/prompts/saam_analysis.md
++                temp_open_questions.append(
++                    {
++                        "question_type": "change_risk",
++                        "entity_a_id": pf_entity.id,
++                        "entity_b_id": rm_entity.id,
++                        "similarity": round(similarity, 4),
++                        "description": (
++                            f"Entities '{pf_entity.name}' and '{rm_entity.name}' have "
++                            f"moderate semantic similarity ({similarity:.2f}). "
++                            f"They are grouped in C4 boundary group '{bg['group_id']}' "
++                            "but remain separate deployment units."
++                        ),
++                        "source": "deduplication",
++                        "severity": "medium",
++                    }
++                )
++
++        if not merged:
++            rm_entities.append(pf_entity)
++            boundary_groups.extend(temp_boundary_groups)
++            open_questions.extend(temp_open_questions)
++
++    # Rewrite ALL relationships (both running model and primary fragment) using the ID mapping
++    all_relationships: list[C4Relationship] = []
++
++    for rel in rm_relationships:
++        src = id_mapping.get(rel.source_id, rel.source_id)
++        tgt = id_mapping.get(rel.target_id, rel.target_id)
++        meta = dict(rel.metadata) if rel.metadata else {}
++        all_relationships.append(
++            C4Relationship(
++                id=rel.id,
++                source_id=src,
++                target_id=tgt,
++                description=rel.description,
++                relationship_type=rel.relationship_type,
++                diagram_scope=rel.diagram_scope,
++                metadata=meta,
++            )
++        )
++
++    for rel in pf_relationships:
++        src = id_mapping.get(rel.source_id, rel.source_id)
++        tgt = id_mapping.get(rel.target_id, rel.target_id)
++        meta = dict(rel.metadata) if rel.metadata else {}
++        all_relationships.append(
++            C4Relationship(
++                id=rel.id,
++                source_id=src,
++                target_id=tgt,
++                description=rel.description,
++                relationship_type=rel.relationship_type,
++                diagram_scope=rel.diagram_scope,
++                metadata=meta,
++            )
++        )
++
++    # Serialize back to dicts
++    updated_model: dict[str, Any] = {
++        "entities": [
++            e.model_dump() if isinstance(e, C4Entity) else e for e in rm_entities
++        ],
++        "relationships": [
++            r.model_dump() if isinstance(r, C4Relationship) else r
++            for r in all_relationships
++        ],
++        "boundary_groups": boundary_groups,
++    }
++
++    return updated_model, open_questions, merge_log
+diff --git a/raa/raa/judge/reconcile.py b/raa/raa/judge/reconcile.py
+index c9678e3..ce64469 100644
+--- a/raa/raa/judge/reconcile.py
++++ b/raa/raa/judge/reconcile.py
+@@ -1,29 +1,34 @@
+ """
+-Judge reconciliation node (Story 2.3).
++Judge reconciliation node (Story 2.3 + 2.4 + 2.5).
+ 
+-Selects the primary fragment for the current batch via SAAM scoring but
+-does NOT merge, deduplicate, or advance ``batch_cursor``.
++Scores and ranks fragments via SAAM, deduplicates and merges the primary
++fragment into the running ``arch_model``, promotes cross-cutting concerns,
++calibrates per-entity SAAM scores, and advances ``batch_cursor``.
+ """
+ from __future__ import annotations
+ 
++import os
+ from typing import Any
+ 
+ from langchain_core.runnables import RunnableConfig
+ 
++from raa.judge.cross_cutting import promote_all_cross_cutting
++from raa.judge.deduplication import deduplicate_and_merge_fragment
++from raa.judge.saam_calibration import calibrate_entity_saam_scores
+ from raa.judge.scoring import rank_batch_fragments
+ from raa.state.schemas import RAAState
++from raa.utils.constants import EMBEDDING_CACHE_DIR, EMBEDDING_MODEL_NAME
++from raa.utils.embedding_cache import EmbeddingCache, get_embedding_model
+ 
+ 
+ def select_primary_fragment(
+     state: RAAState,
+     config: RunnableConfig | None = None,
+ ) -> dict[str, Any]:
+-    """Score and rank fragments for the current batch, selecting a primary.
++    """Score, rank, deduplicate, and merge the primary fragment.
+ 
+-    Does NOT:
+-    - Return ``batch_cursor``
+-    - Update ``arch_model``
+-    - Perform deduplication or boundary grouping
++    Returns partial state update with ``judge_rankings``, ``arch_model``,
++    ``batch_cursor`` (incremented by 1), and any dedup ``open_questions``.
+     """
+     batch_outputs: list[dict] = state.get("batch_outputs") or []
+     batch_cursor = state.get("batch_cursor", 0)
+@@ -31,14 +36,105 @@ def select_primary_fragment(
+ 
+     # Filter to records for the current batch_cursor only
+     current_batch = [
+-        r for r in batch_outputs
++        r
++        for r in batch_outputs
+         if isinstance(r, dict) and r.get("batch_index") == batch_cursor
+     ]
+ 
+     result = rank_batch_fragments(current_batch, quality_weights)
+ 
+-    # Store auditable ranking results; key is batch_cursor for later lookup
++    # Store auditable ranking results
+     existing_rankings = dict(state.get("judge_rankings") or {})
+     existing_rankings[batch_cursor] = result
+ 
+-    return {"judge_rankings": existing_rankings}
++    # ── Story 2.4: Dedup and merge primary fragment into arch_model ──────
++    primary = result.get("primary_fragment")
++    open_questions: list[dict] = []
++    merge_log: list[dict] = []
++    current_model = state.get("arch_model") or {}
++
++    # Capture winning fragment's saam_scenarios and cross_cutting_candidates for
++    # downstream cross-cutting promotion (Story 2.5) and SAAM calibration (Story 2.5).
++    winning_saam_scenarios: list[dict] = []
++    winning_cc_candidates: list[str] = []
++
++    if primary is not None:
++        # Locate the winning record
++        winning_record = None
++        for r in current_batch:
++            frag = r.get("arch_fragment") if isinstance(r, dict) else None
++            if (
++                frag
++                and r.get("batch_id") == primary.batch_id
++                and r.get("strategy") == primary.strategy
++            ):
++                winning_record = r
++                break
++
++        if winning_record is not None and winning_record.get("arch_fragment"):
++            pf = winning_record["arch_fragment"]
++            pf_entities = pf.get("entities") or []
++            rm_entities = current_model.get("entities") or []
++
++            # Capture fragment-level annotations for downstream processing
++            winning_saam_scenarios = pf.get("saam_scenarios") or []
++            winning_cc_candidates = pf.get("cross_cutting_candidates") or []
++
++            # Only load the embedding model when both sides have entities to compare.
++            # First batch (empty running model) and empty fragments skip the model load.
++            if pf_entities and rm_entities:
++                cfg = {}
++                if config is not None:
++                    if isinstance(config, dict):
++                        cfg = config.get("configurable") or {}
++                    else:
++                        cfg = getattr(config, "configurable", None) or {}
++
++                db_path = cfg.get(
++                    "non_asr_embeddings_db_path",
++                    os.path.join(EMBEDDING_CACHE_DIR, "non_asr_embeddings.db"),
++                )
++                cache_dir = cfg.get("embedding_cache_dir", EMBEDDING_CACHE_DIR)
++                model_name = cfg.get("embedding_model_name", EMBEDDING_MODEL_NAME)
++
++                model = get_embedding_model(cache_dir, model_name)
++
++                with EmbeddingCache(db_path, model_name) as cache:
++                    new_arch_model, questions, merge_log = deduplicate_and_merge_fragment(
++                        pf,
++                        current_model,
++                        cache,
++                        model,
++                    )
++                open_questions = questions
++            else:
++                # No cross-model dedup needed — merge without embedding comparison
++                new_arch_model, _, merge_log = deduplicate_and_merge_fragment(
++                    pf,
++                    current_model,
++                    None,  # cache
++                    None,  # model
++                )
++        else:
++            new_arch_model = current_model
++    else:
++        new_arch_model = current_model
++
++    # ── Story 2.5: Cross-cutting promotion ────────────────────────────────
++    new_arch_model["cross_cutting_candidates"] = list(winning_cc_candidates)
++    new_arch_model, cc_questions = promote_all_cross_cutting(new_arch_model)
++    open_questions.extend(cc_questions)
++
++    # ── Story 2.5: SAAM score calibration ─────────────────────────────────
++    new_arch_model = calibrate_entity_saam_scores(
++        new_arch_model,
++        saam_scenarios=winning_saam_scenarios,
++        merge_log=merge_log,
++    )
++
++    return {
++        "judge_rankings": existing_rankings,
++        "arch_model": new_arch_model,
++        "batch_cursor": batch_cursor + 1,
++        "open_questions": open_questions,
++    }
+diff --git a/raa/raa/judge/saam_calibration.py b/raa/raa/judge/saam_calibration.py
 new file mode 100644
-index 0000000..ba01efd
+index 0000000..3c7b3ea
 --- /dev/null
-+++ b/raa/raa/prompts/saam_analysis.md
-@@ -0,0 +1,34 @@
-+{{! skill: c4:rules as c4_rules }}
-+{{! skill: c4_level_mapping:rules as c4_level_mapping_rules }}
-+{{! skill: saam:rules as saam_rules }}
++++ b/raa/raa/judge/saam_calibration.py
+@@ -0,0 +1,134 @@
++"""
++Per-entity SAAM score calibration engine (Story 2.5).
 +
-+You are an architecture extraction agent using SAAM (Software Architecture Analysis Method).
++Pure deterministic engine — no LLM calls, no randomness.
++"""
++from __future__ import annotations
 +
-+## Task
-+Extract C4 architectural elements from the requirement batch below.
++from raa.utils.constants import (
++    SAAM_BASE_SCORE,
++    SAAM_BOUNDARY_GROUP_PENALTY,
++    SAAM_DEDUP_PENALTY,
++    SAAM_PERFECT_SCORE,
++)
 +
-+## Context
-+- Strategy: SAAM-first analysis (RAA-A)
-+- Batch ID: {{batch_id}}
-+- Reduced confidence: {{reduced_confidence}}
-+- Running model (existing architecture): {{running_model}}
 +
-+## C4 Hierarchy Rules (STRICT)
-+{{{c4_rules}}}
++def _entity_in_boundary_group(entity_id: str, boundary_groups: list[dict]) -> bool:
++    """Check whether an entity is a member of any boundary group."""
++    for bg in boundary_groups:
++        entity_ids = bg.get("entity_ids") or []
++        if entity_id in entity_ids:
++            return True
++    return False
 +
-+## C4 Level Mapping
-+{{{c4_level_mapping_rules}}}
 +
-+## SAAM Scenario Evaluation
-+{{{saam_rules}}}
++def _count_merge_events(entity_id: str, merge_log: list[dict]) -> int:
++    """Count how many merge events this entity participated in."""
++    count = 0
++    for entry in merge_log:
++        merged_id = entry.get("merged_entity_id", "")
++        source_ids: list[str] = entry.get("source_entity_ids") or []
++        if entity_id == merged_id or entity_id in source_ids:
++            count += 1
++    return count
 +
-+## Requirements
-+{{requirements}}
 +
-+## Bridge Requirements (shared context from adjacent batches)
-+{{bridge_requirements}}
++def _check_perfect_score(
++    entity: dict,
++    entities: list[dict],
++    boundary_groups: list[dict],
++    saam_scenarios: list[dict],
++) -> bool:
++    """Check if an entity qualifies for the perfect SAAM score (1.0).
 +
-+## Quality Weights
-+{{quality_weights}}
++    Conditions:
++    1. c4_type == "component"
++    2. No shared requirement_ids with any entity in the same boundary group
++    3. All SAAMScenarios for the entity's requirement_ids have satisfaction == "satisfied"
++    """
++    if entity.get("c4_type") != "component":
++        return False
 +
-+Return an ArchFragment with entities and relationships. Do not nest entities inside other entities.
-diff --git a/raa/raa/prompts/pattern_matching.md b/raa/raa/prompts/pattern_matching.md
++    entity_req_ids = set(entity.get("requirement_ids") or [])
++    if not entity_req_ids:
++        return False
++
++    # Check functional overlap: no shared requirement_ids with same boundary group entities
++    entity_bg_id = (entity.get("metadata") or {}).get("boundary_group_id")
++    if entity_bg_id:
++        for other in entities:
++            if other.get("id") == entity.get("id"):
++                continue
++            other_bg_id = (other.get("metadata") or {}).get("boundary_group_id")
++            if other_bg_id == entity_bg_id:
++                other_req_ids = set(other.get("requirement_ids") or [])
++                if entity_req_ids & other_req_ids:
++                    return False
++
++    # Check all scenarios passing
++    entity_req_list = list(entity_req_ids)
++    relevant_scenarios = [
++        s for s in saam_scenarios
++        if set(s.get("requirement_ids") or []) & entity_req_ids
++    ]
++
++    if not relevant_scenarios:
++        return False
++
++    for scenario in relevant_scenarios:
++        if scenario.get("satisfaction") != "satisfied":
++            return False
++
++    return True
++
++
++def calibrate_entity_saam_scores(
++    arch_model: dict,
++    saam_scenarios: list[dict] | None = None,
++    boundary_groups: list[dict] | None = None,
++    merge_log: list[dict] | None = None,
++) -> dict:
++    """Assign a ``saam_score`` to every entity in the arch model.
++
++    Args:
++        arch_model: Dict with ``entities`` key. May also carry ``boundary_groups``.
++        saam_scenarios: SAAM scenarios from the winning fragment (list of dicts).
++        boundary_groups: Override boundary groups. Defaults to model's ``boundary_groups``.
++        merge_log: Merge log from deduplication. Each entry has
++            ``merged_entity_id``, ``source_entity_ids``, ``merge_type``.
++
++    Returns:
++        Updated arch_model dict with ``saam_score`` set on every entity.
++    """
++    if saam_scenarios is None:
++        saam_scenarios = []
++    if boundary_groups is None:
++        boundary_groups = arch_model.get("boundary_groups") or []
++    if merge_log is None:
++        merge_log = []
++
++    entities: list[dict] = [dict(e) for e in (arch_model.get("entities") or [])]
++
++    for entity in entities:
++        eid = entity.get("id", "")
++
++        if _check_perfect_score(entity, entities, boundary_groups, saam_scenarios):
++            entity["saam_score"] = SAAM_PERFECT_SCORE
++            continue
++
++        score = SAAM_BASE_SCORE
++
++        # Dedup penalty
++        merge_count = _count_merge_events(eid, merge_log)
++        score -= SAAM_DEDUP_PENALTY * merge_count
++
++        # Boundary group penalty
++        if _entity_in_boundary_group(eid, boundary_groups):
++            score -= SAAM_BOUNDARY_GROUP_PENALTY
++
++        # Clamp to [0.0, 1.0]
++        entity["saam_score"] = max(0.0, min(1.0, round(score, 4)))
++
++    result = dict(arch_model)
++    result["entities"] = entities
++    return result
+diff --git a/raa/raa/state/models.py b/raa/raa/state/models.py
+index 8afc344..9ea73c7 100644
+--- a/raa/raa/state/models.py
++++ b/raa/raa/state/models.py
+@@ -38,6 +38,7 @@ class C4Entity(BaseModel):
+     parent_system_id: str | None = None
+     parent_container_id: str | None = None
+     requirement_ids: list[str] = Field(default_factory=list)
++    saam_score: float = Field(default=0.0)
+     metadata: dict = Field(default_factory=dict)
+ 
+ 
+diff --git a/raa/raa/utils/constants.py b/raa/raa/utils/constants.py
+index aa2a047..1d46860 100644
+--- a/raa/raa/utils/constants.py
++++ b/raa/raa/utils/constants.py
+@@ -35,6 +35,26 @@ INFRA_KEYWORDS = ["all", "every", "always", "any"]
+ # ── SAAM scoring multipliers ───────────────────────────────────────────────
+ SAAM_REDUCED_CONFIDENCE_MULTIPLIER = 0.5
+ 
++# ── Cross-cutting concern patterns ─────────────────────────────────────────
++CROSS_CUTTING_PATTERNS = [
++    "security",
++    "compliance",
++    "logging",
++    "monitoring",
++    "authentication",
++    "authorization",
++    "audit",
++    "observability",
++    "rate_limiting",
++    "caching",
++]
++
++# ── SAAM calibration constants ─────────────────────────────────────────────
++SAAM_PERFECT_SCORE = 1.0
++SAAM_BASE_SCORE = 0.70
++SAAM_DEDUP_PENALTY = 0.15
++SAAM_BOUNDARY_GROUP_PENALTY = 0.10
++
+ # ── SAAM satisfaction factors ──────────────────────────────────────────────
+ SAAM_SATISFACTION_FACTORS: dict[str, float] = {
+     "satisfied": 1.0,
+diff --git a/raa/tests/raa/unit/test_judge_cross_cutting.py b/raa/tests/raa/unit/test_judge_cross_cutting.py
 new file mode 100644
-index 0000000..013a2df
+index 0000000..7f29846
 --- /dev/null
-+++ b/raa/raa/prompts/pattern_matching.md
-@@ -0,0 +1,34 @@
-+{{! skill: c4:rules as c4_rules }}
-+{{! skill: c4_level_mapping:rules as c4_level_mapping_rules }}
-+{{! skill: pattern_selection:rules as pattern_selection_rules }}
++++ b/raa/tests/raa/unit/test_judge_cross_cutting.py
+@@ -0,0 +1,391 @@
++"""
++Unit tests for cross-cutting concern promotion engine (Story 2.5).
++"""
++from __future__ import annotations
 +
-+You are an architecture extraction agent using pattern-driven analysis.
++import pytest
 +
-+## Task
-+Extract C4 architectural elements from the requirement batch by matching known architecture patterns.
++from raa.judge.cross_cutting import (
++    detect_cross_cutting_candidates,
++    promote_cross_cutting_to_component,
++    rewrite_relationships_for_promotion,
++    promote_all_cross_cutting,
++)
++from raa.state.models import C4Entity
 +
-+## Context
-+- Strategy: Pattern-driven analysis (RAA-B)
-+- Batch ID: {{batch_id}}
-+- Reduced confidence: {{reduced_confidence}}
-+- Running model (existing architecture): {{running_model}}
 +
-+## C4 Hierarchy Rules (STRICT)
-+{{{c4_rules}}}
++# ── Helpers ─────────────────────────────────────────────────────────────────
 +
-+## C4 Level Mapping
-+{{{c4_level_mapping_rules}}}
 +
-+## Pattern Selection Guidance
-+{{{pattern_selection_rules}}}
++def _entity_dict(
++    id="entity-1",
++    name="Test Entity",
++    description="Test description",
++    c4_type="container",
++    technology="",
++    requirement_ids=None,
++    metadata=None,
++):
++    return {
++        "id": id,
++        "name": name,
++        "description": description,
++        "c4_type": c4_type,
++        "technology": technology,
++        "parent_system_id": None,
++        "parent_container_id": None,
++        "requirement_ids": requirement_ids or [],
++        "saam_score": 0.0,
++        "metadata": metadata or {},
++    }
 +
-+## Requirements
-+{{requirements}}
 +
-+## Bridge Requirements (shared context from adjacent batches)
-+{{bridge_requirements}}
++def _rel_dict(source_id="a", target_id="b", description="uses", metadata=None):
++    return {
++        "id": f"rel-{source_id}-{target_id}",
++        "source_id": source_id,
++        "target_id": target_id,
++        "description": description,
++        "relationship_type": "uses",
++        "diagram_scope": "",
++        "metadata": metadata or {},
++    }
 +
-+## Quality Weights
-+{{quality_weights}}
 +
-+Return an ArchFragment with entities and relationships. Do not nest entities inside other entities.
-diff --git a/raa/raa/prompts/entity_extraction.md b/raa/raa/prompts/entity_extraction.md
++# ── Detection ───────────────────────────────────────────────────────────────
++
++
++class TestDetectCrossCuttingCandidates:
++    def test_no_cross_cutting_candidates_returns_empty(self):
++        model = {"entities": [], "relationships": [], "cross_cutting_candidates": []}
++        result = detect_cross_cutting_candidates(model)
++        assert result == []
++
++    def test_no_matching_patterns_returns_empty(self):
++        model = {
++            "entities": [_entity_dict()],
++            "relationships": [],
++            "cross_cutting_candidates": ["unknown_pattern_xyz"],
++        }
++        result = detect_cross_cutting_candidates(model)
++        assert result == []
++
++    def test_detects_security_pattern(self):
++        model = {
++            "entities": [
++                _entity_dict(
++                    id="auth-svc",
++                    name="Authentication Service",
++                    description="Handles security and authentication",
++                    requirement_ids=["R1", "R2"],
++                )
++            ],
++            "relationships": [],
++            "cross_cutting_candidates": ["security_component", "logging_service"],
++        }
++        result = detect_cross_cutting_candidates(model)
++        patterns = {d["candidate_pattern"] for d in result}
++        assert "security" in patterns
++        assert "logging" in patterns
++
++    def test_detects_pattern_from_entity_metadata(self):
++        model = {
++            "entities": [
++                _entity_dict(
++                    id="mon-svc",
++                    name="Monitor",
++                    description="Monitoring service",
++                    metadata={"cross_cutting_candidates": ["monitoring", "logging"]},
++                )
++            ],
++            "relationships": [],
++            "cross_cutting_candidates": [],
++        }
++        result = detect_cross_cutting_candidates(model)
++        patterns = {d["candidate_pattern"] for d in result}
++        assert "monitoring" in patterns
++        assert "logging" in patterns
++
++    def test_deduplicates_same_pattern(self):
++        model = {
++            "entities": [_entity_dict()],
++            "relationships": [],
++            "cross_cutting_candidates": ["security_service", "security_check"],
++        }
++        result = detect_cross_cutting_candidates(model)
++        assert len(result) == 1
++        assert result[0]["candidate_pattern"] == "security"
++
++    def test_collects_related_entity_ids(self):
++        model = {
++            "entities": [
++                _entity_dict(id="auth-1", name="Auth Service", description="Handles authentication"),
++                _entity_dict(id="unrelated", name="Data Store", description="Stores data"),
++            ],
++            "relationships": [],
++            "cross_cutting_candidates": ["authentication_check"],
++        }
++        result = detect_cross_cutting_candidates(model)
++        assert len(result) == 1
++        assert "auth-1" in result[0]["related_entity_ids"]
++        assert "unrelated" not in result[0]["related_entity_ids"]
++
++    def test_collects_requirement_ids_from_related_entities(self):
++        model = {
++            "entities": [
++                _entity_dict(id="auth-1", name="Auth", description="authentication", requirement_ids=["R1", "R2"]),
++                _entity_dict(id="auth-2", name="Login", description="authentication", requirement_ids=["R2", "R3"]),
++            ],
++            "relationships": [],
++            "cross_cutting_candidates": ["authentication"],
++        }
++        result = detect_cross_cutting_candidates(model)
++        assert len(result) == 1
++        assert set(result[0]["requirement_ids"]) == {"R1", "R2", "R3"}
++
++    def test_matches_infra_keywords(self):
++        model = {
++            "entities": [_entity_dict(name="Every", description="all things")],
++            "relationships": [],
++            "cross_cutting_candidates": ["all_things", "every_service"],
++        }
++        result = detect_cross_cutting_candidates(model)
++        patterns = {d["candidate_pattern"] for d in result}
++        assert "all" in patterns
++        assert "every" in patterns
++
++    def test_entity_tech_matches_pattern(self):
++        model = {
++            "entities": [_entity_dict(id="s1", name="Svc", technology="security-library, caching-layer")],
++            "relationships": [],
++            "cross_cutting_candidates": ["security"],
++        }
++        result = detect_cross_cutting_candidates(model)
++        assert len(result) == 1
++        assert "s1" in result[0]["related_entity_ids"]
++
++
++# ── Promotion ───────────────────────────────────────────────────────────────
++
++
++class TestPromoteCrossCuttingToComponent:
++    def test_creates_component_with_correct_c4_type(self):
++        detection = {
++            "candidate_pattern": "security",
++            "related_entity_ids": ["auth-svc"],
++            "requirement_ids": ["R1", "R2"],
++        }
++        model = {"entities": [], "relationships": []}
++        promoted, affected = promote_cross_cutting_to_component(detection, model)
++        assert promoted.c4_type == "component"
++        assert promoted.id == "cc_security"
++        assert promoted.name == "Security (Cross-Cutting)"
++        assert set(promoted.requirement_ids) == {"R1", "R2"}
++
++    def test_returns_affected_entity_ids(self):
++        detection = {
++            "candidate_pattern": "logging",
++            "related_entity_ids": ["log-svc", "audit-svc"],
++            "requirement_ids": [],
++        }
++        model = {"entities": [], "relationships": []}
++        promoted, affected = promote_cross_cutting_to_component(detection, model)
++        assert set(affected) == {"log-svc", "audit-svc"}
++
++    def test_finds_parent_container(self):
++        detection = {
++            "candidate_pattern": "security",
++            "related_entity_ids": [],
++            "requirement_ids": [],
++        }
++        model = {
++            "entities": [
++                _entity_dict(id="api", name="API", c4_type="system"),
++                _entity_dict(id="backend", name="Backend", description="security container", c4_type="container"),
++            ],
++            "relationships": [],
++        }
++        promoted, _ = promote_cross_cutting_to_component(detection, model)
++        assert promoted.parent_container_id == "backend"
++
++    def test_no_parent_container_when_none_match(self):
++        detection = {
++            "candidate_pattern": "monitoring",
++            "related_entity_ids": [],
++            "requirement_ids": [],
++        }
++        model = {
++            "entities": [_entity_dict(id="api", name="API Gateway", c4_type="system")],
++            "relationships": [],
++        }
++        promoted, _ = promote_cross_cutting_to_component(detection, model)
++        assert promoted.parent_container_id is None
++
++
++# ── Relationship Rewriting ──────────────────────────────────────────────────
++
++
++class TestRewriteRelationshipsForPromotion:
++    def test_rewrites_source_when_affected_and_mentions_pattern(self):
++        rels = [
++            _rel_dict(source_id="auth-svc", target_id="db", description="security check"),
++            _rel_dict(source_id="auth-svc", target_id="cache", description="data access"),
++        ]
++        result = rewrite_relationships_for_promotion(
++            rels, affected_entity_ids=["auth-svc"],
++            promoted_component_id="cc_security", pattern="security",
++        )
++        assert result[0]["source_id"] == "cc_security"
++        assert result[0]["target_id"] == "db"
++        assert result[1]["source_id"] == "auth-svc"  # not rewritten — doesn't mention pattern
++
++    def test_rewrites_target_when_affected_and_mentions_pattern(self):
++        rels = [
++            _rel_dict(source_id="client", target_id="auth-svc", description="authentication"),
++        ]
++        result = rewrite_relationships_for_promotion(
++            rels, affected_entity_ids=["auth-svc"],
++            promoted_component_id="cc_authentication", pattern="authentication",
++        )
++        assert result[0]["target_id"] == "cc_authentication"
++
++    def test_no_rewrite_when_not_affected(self):
++        rels = [
++            _rel_dict(source_id="unrelated", target_id="db", description="security audit"),
++        ]
++        result = rewrite_relationships_for_promotion(
++            rels, affected_entity_ids=["auth-svc"],
++            promoted_component_id="cc_security", pattern="security",
++        )
++        assert result[0]["source_id"] == "unrelated"
++        assert result[0]["target_id"] == "db"
++
++    def test_no_rewrite_when_pattern_not_mentioned(self):
++        rels = [
++            _rel_dict(source_id="auth-svc", target_id="db", description="reads data"),
++        ]
++        result = rewrite_relationships_for_promotion(
++            rels, affected_entity_ids=["auth-svc"],
++            promoted_component_id="cc_security", pattern="security",
++        )
++        assert result[0]["source_id"] == "auth-svc"
++
++    def test_pattern_in_metadata_triggers_rewrite(self):
++        rels = [
++            _rel_dict(source_id="auth-svc", target_id="db", description="uses",
++                       metadata={"concern": "security_check"}),
++        ]
++        result = rewrite_relationships_for_promotion(
++            rels, affected_entity_ids=["auth-svc"],
++            promoted_component_id="cc_security", pattern="security",
++        )
++        assert result[0]["source_id"] == "cc_security"
++
++
++# ── Full Pipeline ───────────────────────────────────────────────────────────
++
++
++class TestPromoteAllCrossCutting:
++    def test_no_candidates_returns_model_unchanged(self):
++        model = {
++            "entities": [_entity_dict()],
++            "relationships": [_rel_dict()],
++            "boundary_groups": [],
++            "cross_cutting_candidates": [],
++        }
++        result, questions = promote_all_cross_cutting(model)
++        assert len(result["entities"]) == 1
++        assert len(result["relationships"]) == 1
++        assert questions == []
++
++    def test_promotes_detected_cross_cutting(self):
++        model = {
++            "entities": [
++                _entity_dict(id="auth-svc", name="Auth Service",
++                             description="Handles authentication and authorization",
++                             requirement_ids=["R1", "R2"]),
++            ],
++            "relationships": [
++                _rel_dict(source_id="auth-svc", target_id="db", description="authentication request"),
++            ],
++            "boundary_groups": [],
++            "cross_cutting_candidates": ["authentication"],
++        }
++        result, questions = promote_all_cross_cutting(model)
++        # Promoted component added
++        entity_ids = {e["id"] for e in result["entities"]}
++        assert "cc_authentication" in entity_ids
++        # Relationship rewritten
++        assert result["relationships"][0]["source_id"] == "cc_authentication"
++
++    def test_multiple_cross_cutting_patterns(self):
++        model = {
++            "entities": [
++                _entity_dict(id="svc-1", name="Security Service", description="security", requirement_ids=["R1"]),
++                _entity_dict(id="svc-2", name="Log Service", description="logging", requirement_ids=["R2"]),
++            ],
++            "relationships": [],
++            "boundary_groups": [],
++            "cross_cutting_candidates": ["security", "logging"],
++        }
++        result, questions = promote_all_cross_cutting(model)
++        entity_ids = {e["id"] for e in result["entities"]}
++        assert "cc_security" in entity_ids
++        assert "cc_logging" in entity_ids
++
++    def test_removes_requirement_ids_from_affected_entities(self):
++        model = {
++            "entities": [
++                _entity_dict(id="auth-svc", name="Auth", description="authentication",
++                             requirement_ids=["R1", "R2"]),
++            ],
++            "relationships": [],
++            "boundary_groups": [],
++            "cross_cutting_candidates": ["authentication"],
++        }
++        result, _ = promote_all_cross_cutting(model)
++        auth_entity = next(e for e in result["entities"] if e["id"] == "auth-svc")
++        assert auth_entity["requirement_ids"] == []
++
++    def test_open_question_when_no_parent_container(self):
++        model = {
++            "entities": [
++                _entity_dict(id="svc", name="Service", description="security thing", c4_type="system"),
++            ],
++            "relationships": [],
++            "boundary_groups": [],
++            "cross_cutting_candidates": ["security"],
++        }
++        result, questions = promote_all_cross_cutting(model)
++        assert len(questions) == 1
++        assert questions[0]["source"] == "cross_cutting_promotion"
++        assert "cc_security" in questions[0]["description"]
++
++    def test_deterministic_same_input_same_output(self):
++        model = {
++            "entities": [
++                _entity_dict(id="svc", name="Auth Service", description="security auth",
++                             requirement_ids=["R1"]),
++            ],
++            "relationships": [_rel_dict(source_id="svc", target_id="db")],
++            "boundary_groups": [],
++            "cross_cutting_candidates": ["security"],
++        }
++        r1, q1 = promote_all_cross_cutting(model)
++        r2, q2 = promote_all_cross_cutting(model)
++        assert r1 == r2
++        assert q1 == q2
++
++    def test_entity_without_cross_cutting_is_unchanged(self):
++        model = {
++            "entities": [
++                _entity_dict(id="svc-1", name="Auth Service", description="authentication", requirement_ids=["R1"]),
++                _entity_dict(id="svc-2", name="Data Store", description="stores data", requirement_ids=["R2"]),
++            ],
++            "relationships": [],
++            "boundary_groups": [],
++            "cross_cutting_candidates": ["authentication"],
++        }
++        result, _ = promote_all_cross_cutting(model)
++        data_entity = next(e for e in result["entities"] if e["id"] == "svc-2")
++        assert data_entity["requirement_ids"] == ["R2"]
+diff --git a/raa/tests/raa/unit/test_judge_deduplication.py b/raa/tests/raa/unit/test_judge_deduplication.py
 new file mode 100644
-index 0000000..2c2892f
+index 0000000..463c175
 --- /dev/null
-+++ b/raa/raa/prompts/entity_extraction.md
-@@ -0,0 +1,42 @@
-+{{! skill: c4:rules as c4_rules }}
-+{{! skill: c4_level_mapping:rules as c4_level_mapping_rules }}
-+{{! skill: entity_extraction:rules as entity_extraction_rules }}
-+{{! skill: relationship_extraction:rules as relationship_extraction_rules }}
-+{{! skill: technology_inference:rules as technology_inference_rules }}
++++ b/raa/tests/raa/unit/test_judge_deduplication.py
+@@ -0,0 +1,466 @@
++"""
++Unit tests for deduplication engine (Story 2.4).
++"""
++from __future__ import annotations
 +
-+You are an architecture extraction agent using entity/relationship-driven analysis.
++import pytest
 +
-+## Task
-+Extract C4 architectural elements from the requirement batch by identifying entities and their relationships.
++from raa.judge.deduplication import (
++    normalize_entity_id,
++    deduplicate_and_merge_fragment,
++    _merge_entities,
++    _union_technology,
++    _do_ids_overlap,
++    _rewrite_relationship_ids,
++    _create_boundary_group,
++    _to_entity,
++    _to_relationship,
++)
++from raa.state.models import C4Entity, C4Relationship
 +
-+## Context
-+- Strategy: Entity/relationship extraction (RAA-C)
-+- Batch ID: {{batch_id}}
-+- Reduced confidence: {{reduced_confidence}}
-+- Running model (existing architecture): {{running_model}}
 +
-+## C4 Hierarchy Rules (STRICT)
-+{{{c4_rules}}}
++# ── ID Normalization ────────────────────────────────────────────────────────
 +
-+## C4 Level Mapping
-+{{{c4_level_mapping_rules}}}
 +
-+## Entity Extraction Rules
-+{{{entity_extraction_rules}}}
++@pytest.mark.parametrize(
++    "input_id, expected",
++    [
++        ("User_Service", "user_service"),
++        ("userService", "user_service"),
++        ("user-service", "user_service"),
++        ("UserService", "user_service"),
++        ("DTOParser", "dto_parser"),
++        ("user.service", "user_service"),
++        ("user service", "user_service"),
++        ("user__service", "user_service"),
++        ("_user_service_", "user_service"),
++        ("simple", "simple"),
++        ("UPPERCASE", "uppercase"),
++        ("HTTPClient", "http_client"),
++        ("  spaced  ", "spaced"),
++    ],
++)
++def test_normalize_entity_id(input_id, expected):
++    assert normalize_entity_id(input_id) == expected
 +
-+## Relationship Extraction Rules
-+{{{relationship_extraction_rules}}}
 +
-+## Technology Inference Rules
-+{{{technology_inference_rules}}}
++# ── Technology Union ────────────────────────────────────────────────────────
 +
-+## Requirements
-+{{requirements}}
 +
-+## Bridge Requirements (shared context from adjacent batches)
-+{{bridge_requirements}}
++def test_union_technology_basic():
++    result = _union_technology("Python, FastAPI", "FastAPI, Redis")
++    assert result == "FastAPI, Python, Redis"
 +
-+## Quality Weights
-+{{quality_weights}}
 +
-+Return an ArchFragment with entities and relationships. Do not nest entities inside other entities.
++def test_union_technology_semicolons():
++    result = _union_technology("Python;FastAPI", "Redis; Python")
++    assert result == "FastAPI, Python, Redis"
++
++
++def test_union_technology_empty():
++    assert _union_technology("", "") == ""
++    assert _union_technology("Python", "") == "Python"
++
++
++def test_union_technology_whitespace():
++    result = _union_technology("  Python  ,  FastAPI  ", "  FastAPI  ")
++    assert result == "FastAPI, Python"
++
++
++# ── Requirement ID Overlap ──────────────────────────────────────────────────
++
++
++def test_do_ids_overlap_true():
++    a = C4Entity(id="a", name="A", requirement_ids=["R1", "R2"])
++    b = C4Entity(id="b", name="B", requirement_ids=["R2", "R3"])
++    assert _do_ids_overlap(a, b) is True
++
++
++def test_do_ids_overlap_false():
++    a = C4Entity(id="a", name="A", requirement_ids=["R1", "R2"])
++    b = C4Entity(id="b", name="B", requirement_ids=["R3", "R4"])
++    assert _do_ids_overlap(a, b) is False
++
++
++def test_do_ids_overlap_empty():
++    a = C4Entity(id="a", name="A")
++    b = C4Entity(id="b", name="B")
++    assert _do_ids_overlap(a, b) is False
++
++
++# ── Entity Merging ──────────────────────────────────────────────────────────
++
++
++def test_merge_entities_longest_description_kept():
++    a = C4Entity(id="a", name="A", description="Short", technology="Python",
++                 requirement_ids=["R1"])
++    b = C4Entity(id="b", name="B", description="Much longer description here",
++                 technology="FastAPI", requirement_ids=["R2"])
++    merged = _merge_entities(a, b)
++    assert merged.description == "Much longer description here"
++
++
++def test_merge_entities_canonical_id_from_more_reqs():
++    a = C4Entity(id="a", name="A", requirement_ids=["R1"])
++    b = C4Entity(id="b", name="B", requirement_ids=["R2", "R3"])
++    merged = _merge_entities(a, b)
++    assert merged.id == "b"
++
++
++def test_merge_entities_canonical_id_tie_break_a():
++    a = C4Entity(id="a", name="A", requirement_ids=["R1", "R2"])
++    b = C4Entity(id="b", name="B", requirement_ids=["R3", "R4"])
++    merged = _merge_entities(a, b)
++    assert merged.id == "a"  # tie → entity_a wins
++
++
++def test_merge_entities_technology_union():
++    a = C4Entity(id="a", name="A", technology="Python, FastAPI", requirement_ids=["R1"])
++    b = C4Entity(id="b", name="B", technology="FastAPI, Redis", requirement_ids=["R1"])
++    merged = _merge_entities(a, b)
++    assert "Python" in merged.technology
++    assert "FastAPI" in merged.technology
++    assert "Redis" in merged.technology
++
++
++def test_merge_entities_requirement_ids_union():
++    a = C4Entity(id="a", name="A", requirement_ids=["R1", "R2"])
++    b = C4Entity(id="b", name="B", requirement_ids=["R2", "R3"])
++    merged = _merge_entities(a, b)
++    assert merged.requirement_ids == ["R1", "R2", "R3"]
++
++
++def test_merge_entities_metadata_merged():
++    a = C4Entity(id="a", name="A", metadata={"key_a": 1})
++    b = C4Entity(id="b", name="B", metadata={"key_b": 2})
++    merged = _merge_entities(a, b)
++    assert merged.metadata == {"key_a": 1, "key_b": 2}
++
++
++def test_merge_entities_retains_c4_type():
++    a = C4Entity(id="a", name="A", c4_type="container", requirement_ids=["R1", "R2"])
++    b = C4Entity(id="b", name="B", c4_type="component", requirement_ids=["R3"])
++    merged = _merge_entities(a, b)
++    assert merged.c4_type == "container"  # canonical (more reqs) is a
++
++
++# ── Relationship Rewriting ──────────────────────────────────────────────────
++
++
++def test_rewrite_relationship_ids_source():
++    rels = [
++        C4Relationship(
++            id="rel-1", source_id="old_id", target_id="other",
++            description="uses", relationship_type="uses",
++        ),
++    ]
++    result = _rewrite_relationship_ids(rels, "old_id", "new_id")
++    assert result[0].source_id == "new_id"
++    assert result[0].target_id == "other"
++
++
++def test_rewrite_relationship_ids_target():
++    rels = [
++        C4Relationship(
++            id="rel-1", source_id="other", target_id="old_id",
++            description="uses", relationship_type="uses",
++        ),
++    ]
++    result = _rewrite_relationship_ids(rels, "old_id", "new_id")
++    assert result[0].source_id == "other"
++    assert result[0].target_id == "new_id"
++
++
++def test_rewrite_relationship_ids_both():
++    rels = [
++        C4Relationship(
++            id="rel-1", source_id="old_id", target_id="old_id",
++            description="self-ref", relationship_type="uses",
++        ),
++    ]
++    result = _rewrite_relationship_ids(rels, "old_id", "new_id")
++    assert result[0].source_id == "new_id"
++    assert result[0].target_id == "new_id"
++
++
++def test_rewrite_relationship_ids_no_match():
++    rels = [
++        C4Relationship(
++            id="rel-1", source_id="a", target_id="b",
++            description="uses", relationship_type="uses",
++        ),
++    ]
++    result = _rewrite_relationship_ids(rels, "old_id", "new_id")
++    assert result[0].source_id == "a"
++    assert result[0].target_id == "b"
++
++
++def test_rewrite_relationship_ids_does_not_mutate_original():
++    rels = [
++        C4Relationship(
++            id="rel-1", source_id="old_id", target_id="other",
++        ),
++    ]
++    _rewrite_relationship_ids(rels, "old_id", "new_id")
++    assert rels[0].source_id == "old_id"  # unchanged
++
++
++# ── Boundary Group Creation ─────────────────────────────────────────────────
++
++
++def test_create_boundary_group():
++    bg = _create_boundary_group("entity_a", "entity_b", 0.7234)
++    assert bg["group_id"] == "bg_entity_a_entity_b"
++    assert bg["entity_ids"] == ["entity_a", "entity_b"]
++    assert bg["similarity"] == 0.7234
++    assert "rationale" in bg
++
++
++# ── Type Coercion ───────────────────────────────────────────────────────────
++
++
++def test_to_entity_from_dict():
++    d = {"id": "a", "name": "A", "description": "desc"}
++    result = _to_entity(d)
++    assert isinstance(result, C4Entity)
++    assert result.id == "a"
++
++
++def test_to_entity_from_c4entity():
++    e = C4Entity(id="a", name="A")
++    result = _to_entity(e)
++    assert result is e
++
++
++def test_to_entity_bad_type():
++    with pytest.raises(TypeError):
++        _to_entity("not an entity")
++
++
++def test_to_relationship_from_dict():
++    d = {"id": "r1", "source_id": "a", "target_id": "b"}
++    result = _to_relationship(d)
++    assert isinstance(result, C4Relationship)
++    assert result.id == "r1"
++
++
++def test_to_relationship_bad_type():
++    with pytest.raises(TypeError):
++        _to_relationship(42)
++
++
++# ── Deduplicate and Merge Fragment ──────────────────────────────────────────
++
++
++def _entity_dict(**overrides):
++    defaults = {
++        "id": "svc-1",
++        "name": "Service 1",
++        "description": "A backend service for user management",
++        "c4_type": "container",
++        "technology": "Python",
++        "requirement_ids": ["R1"],
++    }
++    defaults.update(overrides)
++    return defaults
++
++
++def _rel_dict(**overrides):
++    defaults = {
++        "id": "rel-1",
++        "source_id": "svc-1",
++        "target_id": "svc-2",
++        "description": "uses",
++        "relationship_type": "uses",
++    }
++    defaults.update(overrides)
++    return defaults
++
++
++class TestDeduplicateAndMergeFragment:
++    """Tests for deduplicate_and_merge_fragment function."""
++
++    def test_empty_fragment_empty_model(self):
++        """Empty fragment into empty model → empty model."""
++        model, questions, _ = deduplicate_and_merge_fragment(
++            {"entities": [], "relationships": []},
++            {},
++            None,
++            None,
++        )
++        assert model["entities"] == []
++        assert model["relationships"] == []
++        assert model["boundary_groups"] == []
++        assert questions == []
++
++    def test_new_entities_added_to_empty_model(self):
++        """First batch: all entities added without dedup."""
++        pf = {
++            "entities": [_entity_dict(id="svc-1"), _entity_dict(id="svc-2")],
++            "relationships": [_rel_dict()],
++        }
++        model, questions, _ = deduplicate_and_merge_fragment(pf, {}, None, None)
++
++        assert len(model["entities"]) == 2
++        assert len(model["relationships"]) == 1
++        assert questions == []
++
++    def test_exact_id_match_merges(self):
++        """Normalized ID match (no model needed)."""
++        pf = {
++            "entities": [_entity_dict(id="user-service", description="New desc",
++                                      technology="FastAPI", requirement_ids=["R1"])],
++            "relationships": [],
++        }
++        running = {
++            "entities": [_entity_dict(id="user_service", description="Old",
++                                      technology="Python", requirement_ids=["R2"])],
++            "relationships": [],
++        }
++
++        model, questions, _ = deduplicate_and_merge_fragment(pf, running, None, None)
++
++        assert len(model["entities"]) == 1
++        merged = model["entities"][0]
++        assert merged["description"] == "New desc"  # longer kept
++        assert "FastAPI" in merged["technology"]
++        assert "Python" in merged["technology"]
++        assert set(merged["requirement_ids"]) == {"R1", "R2"}
++
++    def test_exact_id_match_rewrites_relationships(self):
++        """When entity merged by ID, relationships are rewritten."""
++        pf = {
++            "entities": [_entity_dict(id="user-service")],
++            "relationships": [_rel_dict(source_id="user-service", target_id="payment")],
++        }
++        running = {
++            "entities": [_entity_dict(id="user_service")],
++            "relationships": [],
++        }
++
++        model, _, _ = deduplicate_and_merge_fragment(pf, running, None, None)
++
++        assert len(model["relationships"]) == 1
++        assert model["relationships"][0]["source_id"] == model["entities"][0]["id"]
++
++    def test_no_model_fallback_adds_as_new(self):
++        """When cache=None, no similarity check — non-matching entities added as new."""
++        pf = {
++            "entities": [_entity_dict(id="svc-new")],
++            "relationships": [],
++        }
++        running = {
++            "entities": [_entity_dict(id="svc-existing")],
++            "relationships": [],
++        }
++
++        model, _, _ = deduplicate_and_merge_fragment(pf, running, None, None)
++
++        assert len(model["entities"]) == 2
++
++    def test_preserves_existing_boundary_groups(self):
++        """Existing boundary_groups in running model are preserved."""
++        existing_bg = [{"group_id": "bg_old", "entity_ids": ["a", "b"], "similarity": 0.7}]
++        pf = {"entities": [_entity_dict()], "relationships": []}
++        running = {"entities": [], "relationships": [], "boundary_groups": existing_bg}
++
++        model, _, _ = deduplicate_and_merge_fragment(pf, running, None, None)
++
++        assert len(model["boundary_groups"]) == 1
++        assert model["boundary_groups"][0]["group_id"] == "bg_old"
++
++    def test_returns_serialized_dicts(self):
++        """Output should contain plain dicts, not Pydantic models."""
++        pf = {"entities": [_entity_dict()], "relationships": [_rel_dict()]}
++        model, _, _ = deduplicate_and_merge_fragment(pf, {}, None, None)
++
++        assert isinstance(model["entities"][0], dict)
++        assert isinstance(model["relationships"][0], dict)
++
++    def test_no_id_match_no_model(self):
++        """Different IDs, no model → entities added separately."""
++        pf = {
++            "entities": [_entity_dict(id="svc-a")],
++            "relationships": [],
++        }
++        running = {
++            "entities": [_entity_dict(id="svc-b")],
++            "relationships": [],
++        }
++
++        model, _, _ = deduplicate_and_merge_fragment(pf, running, None, None)
++
++        assert len(model["entities"]) == 2
++        ids = {e["id"] for e in model["entities"]}
++        assert ids == {"svc-a", "svc-b"}
++
++    def test_union_technology_case_insensitive_dedup(self):
++        """Technology union should deduplicate case-insensitively."""
++        result = _union_technology("python, fastapi", "Python, FastAPI")
++        assert result == "FastAPI, Python"
++
++    def test_merge_hierarchy_mismatch_creates_open_question(self):
++        """Hierarchy mismatch during merge should create a change_risk open question."""
++        pf = {
++            "entities": [_entity_dict(id="user-service", parent_system_id="system-a")],
++            "relationships": [],
++        }
++        running = {
++            "entities": [_entity_dict(id="user_service", parent_system_id="system-b")],
++            "relationships": [],
++        }
++        model, questions, _ = deduplicate_and_merge_fragment(pf, running, None, None)
++        assert len(questions) == 1
++        assert questions[0]["question_type"] == "change_risk"
++        assert "mismatching C4 parent hierarchy" in questions[0]["description"]
++
++    # ── Merge Log (Story 2.5) ──────────────────────────────────────────
++
++    def test_returns_3_tuple_with_merge_log(self):
++        """deduplicate_and_merge_fragment returns 3-tuple: (model, questions, merge_log)."""
++        pf = {"entities": [_entity_dict()], "relationships": []}
++        result = deduplicate_and_merge_fragment(pf, {}, None, None)
++        assert len(result) == 3
++        model, questions, merge_log = result
++        assert isinstance(model, dict)
++        assert isinstance(questions, list)
++        assert isinstance(merge_log, list)
++
++    def test_merge_log_empty_when_no_merges(self):
++        pf = {"entities": [_entity_dict(id="svc-new")], "relationships": []}
++        running = {"entities": [_entity_dict(id="svc-existing")], "relationships": []}
++        _, _, merge_log = deduplicate_and_merge_fragment(pf, running, None, None)
++        assert merge_log == []
++
++    def test_merge_log_records_exact_id_merge(self):
++        pf = {
++            "entities": [_entity_dict(id="user-service")],
++            "relationships": [],
++        }
++        running = {
++            "entities": [_entity_dict(id="user_service")],
++            "relationships": [],
++        }
++        _, _, merge_log = deduplicate_and_merge_fragment(pf, running, None, None)
++        assert len(merge_log) == 1
++        entry = merge_log[0]
++        assert "merged_entity_id" in entry
++        assert "source_entity_ids" in entry
++        assert len(entry["source_entity_ids"]) == 2
++        assert entry["merge_type"] == "exact_id"
++
++    def test_merge_log_entry_structure(self):
++        pf = {
++            "entities": [_entity_dict(id="user-service")],
++            "relationships": [],
++        }
++        running = {
++            "entities": [_entity_dict(id="user_service")],
++            "relationships": [],
++        }
++        _, _, merge_log = deduplicate_and_merge_fragment(pf, running, None, None)
++        entry = merge_log[0]
++        assert isinstance(entry["merged_entity_id"], str)
++        assert isinstance(entry["source_entity_ids"], list)
++        assert all(isinstance(eid, str) for eid in entry["source_entity_ids"])
++        assert entry["merge_type"] in ("exact_id", "similarity")
+diff --git a/raa/tests/raa/unit/test_judge_reconcile.py b/raa/tests/raa/unit/test_judge_reconcile.py
+index b72c9cb..eac88bd 100644
+--- a/raa/tests/raa/unit/test_judge_reconcile.py
++++ b/raa/tests/raa/unit/test_judge_reconcile.py
+@@ -1,12 +1,12 @@
+ """
+-Unit tests for Judge reconciliation node (Story 2.3).
++Unit tests for Judge reconciliation node (Story 2.3 + 2.4).
+ """
+ from __future__ import annotations
+ 
+ import pytest
+ 
+ from raa.judge.reconcile import select_primary_fragment
+-from raa.state.models import ArchFragment, SAAMScenario
++from raa.state.models import ArchFragment, C4Entity, C4Relationship, SAAMScenario
+ 
+ 
+ def _make_fragment():
+@@ -19,7 +19,37 @@ def _make_fragment():
+     return ArchFragment(saam_scenarios=[scenario])
+ 
+ 
+-def _make_state(batch_outputs=None, batch_cursor=0, quality_weights=None):
++def _make_fragment_with_entities():
++    """Create a fragment with entities for merge testing."""
++    scenario = SAAMScenario(
++        id="S1",
++        description="Test scenario",
++        quality_attributes=["Performance Efficiency"],
++        satisfaction="satisfied",
++    )
++    entity = C4Entity(
++        id="user_service",
++        name="User Service",
++        description="Handles user authentication and authorization",
++        c4_type="container",
++        technology="Python, FastAPI",
++        requirement_ids=["R1", "R2"],
++    )
++    relationship = C4Relationship(
++        id="rel-1",
++        source_id="user_service",
++        target_id="payment_service",
++        description="Uses",
++        relationship_type="uses",
++    )
++    return ArchFragment(
++        entities=[entity],
++        relationships=[relationship],
++        saam_scenarios=[scenario],
++    )
++
++
++def _make_state(batch_outputs=None, batch_cursor=0, quality_weights=None, arch_model=None):
+     return {
+         "batch_cursor": batch_cursor,
+         "quality_weights": quality_weights or {"Performance Efficiency": 5},
+@@ -34,6 +64,7 @@ def _make_state(batch_outputs=None, batch_cursor=0, quality_weights=None):
+         "batch_outputs": batch_outputs or [],
+         "open_questions": [],
+         "incoherent_batches": [],
++        "arch_model": arch_model or {},
+     }
+ 
+ 
+@@ -96,25 +127,21 @@ def test_select_primary_fragment_filters_by_batch_cursor():
+     assert rankings[1]["scored_fragments"][0].batch_index == 1
+ 
+ 
+-def test_select_primary_fragment_returns_only_state_updates():
+-    """Node must return only state updates, not the full state."""
++def test_select_primary_fragment_increments_batch_cursor():
++    """Story 2.4: Node must increment batch_cursor by 1."""
+     frag = _make_fragment()
+     records = [
+         _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
+     ]
+-    state = _make_state(batch_outputs=records, batch_cursor=0)
++    state = _make_state(batch_outputs=records, batch_cursor=3)
+ 
+     result = select_primary_fragment(state)
+ 
+-    # Should be a partial update dict, not contain the full state keys
+-    assert "judge_rankings" in result
+-    assert "batch_cursor" not in result
+-    assert "arch_model" not in result
+-    assert "batch_outputs" not in result
++    assert result["batch_cursor"] == 4
+ 
+ 
+-def test_select_primary_fragment_does_not_advance_batch_cursor():
+-    """Node must not return batch_cursor in the update."""
++def test_select_primary_fragment_returns_arch_model():
++    """Story 2.4: Node must return arch_model in state update."""
+     frag = _make_fragment()
+     records = [
+         _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
+@@ -123,7 +150,9 @@ def test_select_primary_fragment_does_not_advance_batch_cursor():
+ 
+     result = select_primary_fragment(state)
+ 
+-    assert "batch_cursor" not in result
++    assert "arch_model" in result
++    assert "entities" in result["arch_model"]
++    assert "relationships" in result["arch_model"]
+ 
+ 
+ def test_select_primary_fragment_empty_batch():
+@@ -135,6 +164,9 @@ def test_select_primary_fragment_empty_batch():
+     assert "judge_rankings" in result
+     rankings = result["judge_rankings"]
+     assert rankings[0]["primary_fragment"] is None
++    # Story 2.4: still advances cursor and returns arch_model
++    assert result["batch_cursor"] == 1
++    assert "arch_model" in result
+ 
+ 
+ def test_select_primary_fragment_preserves_existing_rankings():
+@@ -157,8 +189,10 @@ def test_select_primary_fragment_preserves_existing_rankings():
+     state2 = _make_state(
+         batch_outputs=records0 + records1,
+         batch_cursor=1,
++        arch_model=intermediate.get("arch_model"),
+     )
+     state2["judge_rankings"] = intermediate["judge_rankings"]
++    state2["open_questions"] = []
+ 
+     result = select_primary_fragment(state2)
+ 
+@@ -167,3 +201,148 @@ def test_select_primary_fragment_preserves_existing_rankings():
+     assert 1 in rankings  # new
+     assert rankings[0]["primary_fragment"].strategy == "raa_a"
+     assert rankings[1]["primary_fragment"].strategy == "raa_b"
++
++
++def test_select_primary_fragment_merges_entities():
++    """Story 2.4: Primary fragment entities should be merged into arch_model."""
++    frag = _make_fragment_with_entities()
++    records = [
++        _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
++    ]
++    state = _make_state(batch_outputs=records, batch_cursor=0)
++
++    result = select_primary_fragment(state)
++
++    assert len(result["arch_model"]["entities"]) == 1
++    assert result["arch_model"]["entities"][0]["name"] == "User Service"
++    assert len(result["arch_model"]["relationships"]) == 1
++    assert "open_questions" in result
++
++
++# ── Story 2.5 Integration Tests ─────────────────────────────────────────────
++
++
++def test_reconcile_entities_carry_saam_score():
++    """Story 2.5: C4Entity objects in returned arch_model must carry saam_score."""
++    frag = _make_fragment_with_entities()
++    records = [
++        _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
++    ]
++    state = _make_state(batch_outputs=records, batch_cursor=0)
++
++    result = select_primary_fragment(state)
++
++    for entity in result["arch_model"]["entities"]:
++        assert "saam_score" in entity
++        assert isinstance(entity["saam_score"], float)
++        assert 0.0 <= entity["saam_score"] <= 1.0
++
++
++def test_reconcile_calls_cross_cutting_promotion():
++    """Story 2.5: Cross-cutting candidates in fragment trigger promotion."""
++    entity = C4Entity(
++        id="auth_service",
++        name="Authentication Service",
++        description="Handles security and authentication",
++        c4_type="container",
++        technology="Python",
++        requirement_ids=["R1", "R2"],
++    )
++    frag = ArchFragment(
++        entities=[entity],
++        relationships=[],
++        cross_cutting_candidates=["security", "logging"],
++        saam_scenarios=[],
++    )
++    records = [
++        _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
++    ]
++    state = _make_state(batch_outputs=records, batch_cursor=0)
++
++    result = select_primary_fragment(state)
++
++    entity_ids = {e["id"] for e in result["arch_model"]["entities"]}
++    assert "cc_security" in entity_ids
++    assert "cc_logging" in entity_ids
++
++
++def test_reconcile_no_cross_cutting_when_no_candidates():
++    """Story 2.5: No cross-cutting candidates → no promoted components."""
++    frag = _make_fragment_with_entities()
++    records = [
++        _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
++    ]
++    state = _make_state(batch_outputs=records, batch_cursor=0)
++
++    result = select_primary_fragment(state)
++
++    entity_ids = {e["id"] for e in result["arch_model"]["entities"]}
++    assert not any(eid.startswith("cc_") for eid in entity_ids)
++
++
++def test_reconcile_passes_merge_log_to_calibration():
++    """Story 2.5: merge_log from dedup flows into calibration (scores reflect merge state)."""
++    entity = C4Entity(
++        id="auth_service",
++        name="Auth",
++        description="Authentication service",
++        c4_type="container",
++        requirement_ids=["R1"],
++    )
++    frag = ArchFragment(
++        entities=[entity],
++        relationships=[],
++        saam_scenarios=[],
++    )
++    records = [
++        _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
++    ]
++    state = _make_state(batch_outputs=records, batch_cursor=0)
++
++    # Run first batch to add entity to arch_model
++    result1 = select_primary_fragment(state)
++    assert len(result1["arch_model"]["entities"]) == 1
++
++    # Run second batch with same entity (different ID casing → exact_id merge)
++    entity2 = C4Entity(
++        id="auth_service",  # same normalized ID
++        name="Auth v2",
++        description="Updated authentication service",
++        c4_type="container",
++        requirement_ids=["R2"],
++    )
++    frag2 = ArchFragment(
++        entities=[entity2],
++        relationships=[],
++        saam_scenarios=[],
++    )
++    records2 = [
++        _make_record(batch_id="batch-2", batch_index=1, strategy="raa_a",
++                     arch_fragment=frag2.model_dump()),
++    ]
++    state2 = _make_state(
++        batch_outputs=records2,
++        batch_cursor=1,
++        arch_model=result1["arch_model"],
++    )
++    state2["judge_rankings"] = result1.get("judge_rankings", {})
++    state2["open_questions"] = []
++
++    result2 = select_primary_fragment(state2)
++    # Entity merged → saam_score should be below base (dedup penalty applied)
++    merged = result2["arch_model"]["entities"][0]
++    from raa.utils.constants import SAAM_BASE_SCORE, SAAM_DEDUP_PENALTY
++    assert merged["saam_score"] < SAAM_BASE_SCORE
++
++
++def test_reconcile_boundary_groups_preserved():
++    """Story 2.5: boundary_groups in arch_model are preserved through calibration."""
++    frag = _make_fragment_with_entities()
++    records = [
++        _make_record(strategy="raa_a", arch_fragment=frag.model_dump()),
++    ]
++    state = _make_state(batch_outputs=records, batch_cursor=0)
++
++    result = select_primary_fragment(state)
++
++    assert "boundary_groups" in result["arch_model"]
+diff --git a/raa/tests/raa/unit/test_judge_saam_calibration.py b/raa/tests/raa/unit/test_judge_saam_calibration.py
+new file mode 100644
+index 0000000..7c1e940
+--- /dev/null
++++ b/raa/tests/raa/unit/test_judge_saam_calibration.py
+@@ -0,0 +1,399 @@
++"""
++Unit tests for SAAM score calibration engine (Story 2.5).
++"""
++from __future__ import annotations
++
++import pytest
++
++from raa.judge.saam_calibration import calibrate_entity_saam_scores
++from raa.utils.constants import (
++    SAAM_BASE_SCORE,
++    SAAM_BOUNDARY_GROUP_PENALTY,
++    SAAM_DEDUP_PENALTY,
++    SAAM_PERFECT_SCORE,
++)
++
++
++# ── Helpers ─────────────────────────────────────────────────────────────────
++
++
++def _entity_dict(
++    id="entity-1",
++    name="Test",
++    description="Test",
++    c4_type="container",
++    requirement_ids=None,
++    metadata=None,
++):
++    return {
++        "id": id,
++        "name": name,
++        "description": description,
++        "c4_type": c4_type,
++        "technology": "",
++        "parent_system_id": None,
++        "parent_container_id": None,
++        "requirement_ids": requirement_ids or [],
++        "saam_score": 0.0,
++        "metadata": metadata or {},
++    }
++
++
++def _scenario(satisfaction="satisfied", requirement_ids=None):
++    return {
++        "id": "scenario-1",
++        "description": "Test scenario",
++        "quality_attributes": ["Performance Efficiency"],
++        "satisfaction": satisfaction,
++        "requirement_ids": requirement_ids or [],
++        "metadata": {},
++    }
++
++
++# ── Base Score ──────────────────────────────────────────────────────────────
++
++
++class TestBaseScore:
++    def test_base_score_applied_to_non_component_entity(self):
++        model = {"entities": [_entity_dict(c4_type="container")]}
++        result = calibrate_entity_saam_scores(model)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++    def test_base_score_applied_to_system_entity(self):
++        model = {"entities": [_entity_dict(c4_type="system")]}
++        result = calibrate_entity_saam_scores(model)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++    def test_base_score_applied_when_no_scenarios(self):
++        model = {"entities": [_entity_dict(c4_type="component", requirement_ids=["R1"])]}
++        result = calibrate_entity_saam_scores(model, saam_scenarios=[])
++        # No scenarios means not qualified for perfect → gets base score
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++
++# ── Perfect Score ───────────────────────────────────────────────────────────
++
++
++class TestPerfectScore:
++    def test_perfect_score_for_qualifying_component(self):
++        model = {
++            "entities": [
++                _entity_dict(
++                    id="comp-1",
++                    c4_type="component",
++                    requirement_ids=["R1", "R2"],
++                )
++            ]
++        }
++        scenarios = [
++            _scenario(satisfaction="satisfied", requirement_ids=["R1"]),
++            _scenario(satisfaction="satisfied", requirement_ids=["R2"]),
++        ]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        assert result["entities"][0]["saam_score"] == SAAM_PERFECT_SCORE
++
++    def test_not_perfect_when_requirements_shared_in_boundary_group(self):
++        """Entities in same boundary group with shared requirement IDs can't both be perfect."""
++        model = {
++            "entities": [
++                _entity_dict(
++                    id="comp-1",
++                    c4_type="component",
++                    requirement_ids=["R1", "R2"],
++                    metadata={"boundary_group_id": "bg-1"},
++                ),
++                _entity_dict(
++                    id="comp-2",
++                    c4_type="component",
++                    requirement_ids=["R2", "R3"],
++                    metadata={"boundary_group_id": "bg-1"},
++                ),
++            ]
++        }
++        scenarios = [
++            _scenario(satisfaction="satisfied", requirement_ids=["R1", "R2", "R3"]),
++        ]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        assert result["entities"][0]["saam_score"] != SAAM_PERFECT_SCORE
++        assert result["entities"][1]["saam_score"] != SAAM_PERFECT_SCORE
++
++    def test_not_perfect_when_scenario_unsatisfied(self):
++        model = {
++            "entities": [
++                _entity_dict(
++                    id="comp-1",
++                    c4_type="component",
++                    requirement_ids=["R1"],
++                )
++            ]
++        }
++        scenarios = [
++            _scenario(satisfaction="partial", requirement_ids=["R1"]),
++        ]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        assert result["entities"][0]["saam_score"] != SAAM_PERFECT_SCORE
++
++    def test_not_perfect_for_non_component(self):
++        model = {
++            "entities": [
++                _entity_dict(
++                    id="cont-1",
++                    c4_type="container",
++                    requirement_ids=["R1"],
++                )
++            ]
++        }
++        scenarios = [
++            _scenario(satisfaction="satisfied", requirement_ids=["R1"]),
++        ]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++    def test_not_perfect_when_no_requirement_ids(self):
++        model = {
++            "entities": [
++                _entity_dict(id="comp-1", c4_type="component", requirement_ids=[]),
++            ]
++        }
++        result = calibrate_entity_saam_scores(model)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++
++# ── Dedup Penalty ───────────────────────────────────────────────────────────
++
++
++class TestDedupPenalty:
++    def test_dedup_penalty_reduces_score(self):
++        model = {"entities": [_entity_dict(id="merged-1")]}
++        merge_log = [
++            {
++                "merged_entity_id": "merged-1",
++                "source_entity_ids": ["entity-a", "entity-b"],
++                "merge_type": "similarity",
++            }
++        ]
++        result = calibrate_entity_saam_scores(model, merge_log=merge_log)
++        expected = SAAM_BASE_SCORE - SAAM_DEDUP_PENALTY
++        assert result["entities"][0]["saam_score"] == round(expected, 4)
++
++    def test_multiple_merges_stack_penalty(self):
++        model = {"entities": [_entity_dict(id="multi-merged")]}
++        merge_log = [
++            {
++                "merged_entity_id": "multi-merged",
++                "source_entity_ids": ["e1", "e2"],
++                "merge_type": "exact_id",
++            },
++            {
++                "merged_entity_id": "multi-merged",
++                "source_entity_ids": ["multi-merged", "e3"],
++                "merge_type": "similarity",
++            },
++        ]
++        result = calibrate_entity_saam_scores(model, merge_log=merge_log)
++        expected = SAAM_BASE_SCORE - (SAAM_DEDUP_PENALTY * 2)
++        assert result["entities"][0]["saam_score"] == round(expected, 4)
++
++    def test_source_entity_ids_count_as_merge_event(self):
++        """Entity appearing in source_entity_ids also counts as merge participation."""
++        model = {"entities": [_entity_dict(id="source-e1")]}
++        merge_log = [
++            {
++                "merged_entity_id": "other",
++                "source_entity_ids": ["source-e1", "e2"],
++                "merge_type": "similarity",
++            }
++        ]
++        result = calibrate_entity_saam_scores(model, merge_log=merge_log)
++        expected = SAAM_BASE_SCORE - SAAM_DEDUP_PENALTY
++        assert result["entities"][0]["saam_score"] == round(expected, 4)
++
++    def test_no_penalty_without_merge_log(self):
++        model = {"entities": [_entity_dict(id="clean")]}
++        result = calibrate_entity_saam_scores(model, merge_log=[])
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++
++# ── Boundary Group Penalty ──────────────────────────────────────────────────
++
++
++class TestBoundaryGroupPenalty:
++    def test_boundary_group_penalty_reduces_score(self):
++        model = {
++            "entities": [_entity_dict(id="bg-entity")],
++        }
++        boundary_groups = [
++            {"group_id": "bg-1", "entity_ids": ["bg-entity", "other"], "similarity": 0.7}
++        ]
++        result = calibrate_entity_saam_scores(model, boundary_groups=boundary_groups)
++        expected = SAAM_BASE_SCORE - SAAM_BOUNDARY_GROUP_PENALTY
++        assert result["entities"][0]["saam_score"] == round(expected, 4)
++
++    def test_no_penalty_for_non_member(self):
++        model = {
++            "entities": [_entity_dict(id="loner")],
++        }
++        boundary_groups = [
++            {"group_id": "bg-1", "entity_ids": ["other-1", "other-2"], "similarity": 0.7}
++        ]
++        result = calibrate_entity_saam_scores(model, boundary_groups=boundary_groups)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++    def test_uses_model_boundary_groups_by_default(self):
++        model = {
++            "entities": [_entity_dict(id="bg-entity")],
++            "boundary_groups": [
++                {"group_id": "bg-1", "entity_ids": ["bg-entity", "other"], "similarity": 0.7}
++            ],
++        }
++        result = calibrate_entity_saam_scores(model)
++        expected = SAAM_BASE_SCORE - SAAM_BOUNDARY_GROUP_PENALTY
++        assert result["entities"][0]["saam_score"] == round(expected, 4)
++
++
++# ── Combined Penalties ──────────────────────────────────────────────────────
++
++
++class TestCombinedPenalties:
++    def test_both_penalties_apply(self):
++        model = {
++            "entities": [_entity_dict(id="penalized")],
++        }
++        boundary_groups = [
++            {"group_id": "bg-1", "entity_ids": ["penalized", "other"], "similarity": 0.7}
++        ]
++        merge_log = [
++            {
++                "merged_entity_id": "penalized",
++                "source_entity_ids": ["penalized", "e1"],
++                "merge_type": "similarity",
++            }
++        ]
++        result = calibrate_entity_saam_scores(
++            model, boundary_groups=boundary_groups, merge_log=merge_log
++        )
++        expected = SAAM_BASE_SCORE - SAAM_DEDUP_PENALTY - SAAM_BOUNDARY_GROUP_PENALTY
++        assert result["entities"][0]["saam_score"] == round(expected, 4)
++
++
++# ── Score Clamping ──────────────────────────────────────────────────────────
++
++
++class TestScoreClamping:
++    def test_score_clamped_to_zero(self):
++        model = {"entities": [_entity_dict(id="overpenalized")]}
++        # Stack enough penalties to go below 0
++        merge_log = [
++            {"merged_entity_id": "overpenalized", "source_entity_ids": ["overpenalized", f"e{i}"], "merge_type": "similarity"}
++            for i in range(10)
++        ]
++        result = calibrate_entity_saam_scores(model, merge_log=merge_log)
++        assert result["entities"][0]["saam_score"] == 0.0
++
++    def test_score_clamped_to_one(self):
++        model = {
++            "entities": [
++                _entity_dict(id="comp", c4_type="component", requirement_ids=["R1"]),
++            ]
++        }
++        scenarios = [_scenario(satisfaction="satisfied", requirement_ids=["R1"])]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        assert result["entities"][0]["saam_score"] == SAAM_PERFECT_SCORE
++
++
++# ── Empty/Edge Cases ────────────────────────────────────────────────────────
++
++
++class TestEdgeCases:
++    def test_empty_model_returns_empty_model(self):
++        model = {"entities": []}
++        result = calibrate_entity_saam_scores(model)
++        assert result["entities"] == []
++
++    def test_all_defaults_handled(self):
++        """Call with no optional args should work."""
++        model = {"entities": [_entity_dict()]}
++        result = calibrate_entity_saam_scores(model)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++    def test_preserves_non_entity_keys(self):
++        model = {
++            "entities": [_entity_dict()],
++            "boundary_groups": [{"group_id": "bg-1", "entity_ids": ["a", "b"]}],
++            "cross_cutting_candidates": ["security"],
++        }
++        result = calibrate_entity_saam_scores(model)
++        assert "boundary_groups" in result
++        assert "cross_cutting_candidates" in result
++
++    def test_multiple_entities_scored(self):
++        model = {
++            "entities": [
++                _entity_dict(id="e1", c4_type="component", requirement_ids=["R1"]),
++                _entity_dict(id="e2", c4_type="container"),
++                _entity_dict(id="e3", c4_type="system"),
++            ]
++        }
++        scenarios = [_scenario(satisfaction="satisfied", requirement_ids=["R1"])]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        scores = {e["id"]: e["saam_score"] for e in result["entities"]}
++        assert scores["e1"] == SAAM_PERFECT_SCORE
++        assert scores["e2"] == SAAM_BASE_SCORE
++        assert scores["e3"] == SAAM_BASE_SCORE
++
++    def test_deterministic_same_input_same_output(self):
++        model = {
++            "entities": [
++                _entity_dict(id="e1", c4_type="component", requirement_ids=["R1"]),
++                _entity_dict(id="e2"),
++            ]
++        }
++        scenarios = [_scenario(satisfaction="satisfied", requirement_ids=["R1"])]
++        merge_log = [
++            {"merged_entity_id": "e2", "source_entity_ids": ["e2", "e_old"], "merge_type": "exact_id"}
++        ]
++        r1 = calibrate_entity_saam_scores(model, saam_scenarios=scenarios, merge_log=merge_log)
++        r2 = calibrate_entity_saam_scores(model, saam_scenarios=scenarios, merge_log=merge_log)
++        assert r1 == r2
++
++    def test_scenario_with_unknown_satisfaction_not_perfect(self):
++        model = {
++            "entities": [
++                _entity_dict(id="comp", c4_type="component", requirement_ids=["R1"]),
++            ]
++        }
++        scenarios = [_scenario(satisfaction="unknown", requirement_ids=["R1"])]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++    def test_scenario_with_unsatisfied_not_perfect(self):
++        model = {
++            "entities": [
++                _entity_dict(id="comp", c4_type="component", requirement_ids=["R1"]),
++            ]
++        }
++        scenarios = [_scenario(satisfaction="unsatisfied", requirement_ids=["R1"])]
++        result = calibrate_entity_saam_scores(model, saam_scenarios=scenarios)
++        assert result["entities"][0]["saam_score"] == SAAM_BASE_SCORE
++
++    def test_deterministic(self):
++        """Same input → same output (dedicated determinism test)."""
++        model = {
++            "entities": [
++                _entity_dict(id="e1", c4_type="component", requirement_ids=["R1"]),
++                _entity_dict(id="e2", c4_type="container", requirement_ids=["R2"]),
++            ],
++            "boundary_groups": [
++                {"group_id": "bg-1", "entity_ids": ["e1", "e2"], "similarity": 0.7}
++            ],
++        }
++        scenarios = [
++            _scenario(satisfaction="satisfied", requirement_ids=["R1"]),
++            _scenario(satisfaction="partial", requirement_ids=["R2"]),
++        ]
++        merge_log = [
++            {"merged_entity_id": "e1", "source_entity_ids": ["e1", "e_old"], "merge_type": "exact_id"}
++        ]
++        r1 = calibrate_entity_saam_scores(model, saam_scenarios=scenarios, merge_log=merge_log)
++        r2 = calibrate_entity_saam_scores(model, saam_scenarios=scenarios, merge_log=merge_log)
++        assert r1 == r2
 
 ```
+
+## Execution Instructions
+Review the diff with extreme skepticism — assume problems exist. Find at least ten issues to fix or improve in the provided content.
+
+## Output Format
+Output findings as a Markdown list (descriptions only). No preamble, no postamble.
