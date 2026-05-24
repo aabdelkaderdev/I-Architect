@@ -53,6 +53,32 @@ class RAAOutput(TypedDict):
     traceability_manifest: NotRequired[dict]
 
 
+def merge_questions(left: list[dict] | None, right: list[dict] | None) -> list[dict]:
+    """Reducer that appends new questions and updates existing ones by 'id'."""
+    if left is None:
+        left = []
+    if right is None:
+        right = []
+
+    merged = [dict(q) for q in left]
+    for q_new in right:
+        if not isinstance(q_new, dict):
+            continue
+        qid = q_new.get("id")
+        if qid:
+            found = False
+            for q_curr in merged:
+                if q_curr.get("id") == qid:
+                    q_curr.update(q_new)
+                    found = True
+                    break
+            if not found:
+                merged.append(dict(q_new))
+        else:
+            merged.append(dict(q_new))
+    return merged
+
+
 # ---------------------------------------------------------------------------
 # Full Internal State
 # ---------------------------------------------------------------------------
@@ -78,7 +104,7 @@ class RAAState(RAAInput, RAAOutput):
 
     # Phase 6: Parallel execution — append-merge reducers for concurrent writes
     batch_outputs: Annotated[list[dict], add]
-    open_questions: Annotated[list[dict], add]
+    open_questions: Annotated[list[dict], merge_questions]
     incoherent_batches: Annotated[list[dict], add]
     batch_cursor: int
 

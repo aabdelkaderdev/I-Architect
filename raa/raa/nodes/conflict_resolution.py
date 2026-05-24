@@ -107,6 +107,8 @@ def _map_answers_to_questions(
 
     for i, q in enumerate(open_questions):
         qid = q.get("id") or f"q_{i}_{q.get('question_type') or q.get('type') or 'unknown'}"
+        if "id" not in q or not q["id"]:
+            q["id"] = qid
 
         if qid in answers:
             q["resolution"] = answers[qid]
@@ -215,7 +217,7 @@ def _parse_human_override(
         return HumanOverrideInstructions()
 
     try:
-        prompt = load_prompt("parse_human_override", {
+        prompt = load_prompt("parse_human_override.md", {
             "human_answer": answer,
             "arch_model_context": _build_arch_model_context(arch_model),
         })
@@ -489,12 +491,11 @@ def conflict_resolution(
         )
         new_open_questions.extend(validation_questions)
 
-    # Since open_questions is append-only in the state schema (Annotated[list, add]),
-    # returning updated_questions would concatenate the entire list and duplicate it.
-    # We only return new_open_questions to append newly generated questions,
-    # as existing questions are already updated in-place.
+    # Since open_questions uses the merge_questions custom reducer, we return the
+    # updated questions (containing resolutions) plus any newly generated questions
+    # to be merged and persisted correctly in the state checkpoint.
     return {
-        "open_questions": new_open_questions,
+        "open_questions": updated_questions + new_open_questions,
         "arch_model": arch_model,
     }
 

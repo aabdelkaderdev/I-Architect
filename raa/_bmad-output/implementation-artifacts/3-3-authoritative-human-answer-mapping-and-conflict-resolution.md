@@ -1,6 +1,6 @@
 # Story 3.3: Authoritative Human Answer Mapping & Conflict Resolution
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -95,10 +95,7 @@ No debug logs — all 498 tests passed on first implementation pass.
 
 ### Review Findings
 
-- [ ] [Review][Patch] Duplicate open questions in `RAAState` append channel [raa/nodes/conflict_resolution.py:478-481]
-- [ ] [Review][Patch] Redundant Multi-Pass Loop over Unified Instructions [raa/nodes/conflict_resolution.py:470-477]
-- [ ] [Review][Patch] Dangling Relationships on Entity Deletion [raa/nodes/conflict_resolution.py:290-295]
-- [ ] [Review][Patch] Mismatched/Missing Question IDs during Answer Mapping [raa/nodes/conflict_resolution.py:108-112]
-- [ ] [Review][Patch] Lack of Validation for `action` Fields in Modifications [raa/nodes/conflict_resolution.py:252-330]
+- [x] [Review][Patch] Duplicate open questions in `RAAState` append channel [raa/nodes/conflict_resolution.py:492-499]
+- [x] [Review][Patch] Mismatched/Missing Question IDs during Answer Mapping [raa/nodes/human_review_gate.py:70-106]
 - [x] [Review][Defer] Silent Dropping of Overrides when `judge_llm` is Missing [raa/nodes/conflict_resolution.py] — deferred, pre-existing
 

@@ -517,3 +517,41 @@ class TestValidationFallback:
         assert state["open_questions"][0]["resolution"] == "Approved"
         assert result["arch_model"]["assumption_flags"] == []
 
+
+# ── Custom Merge Reducer & ID Assignment ────────────────────────────────────
+
+
+class TestMergeQuestionsReducer:
+    def test_merge_questions_appends_new(self):
+        from raa.state.schemas import merge_questions
+        left = [{"id": "q1", "description": "Q1"}]
+        right = [{"id": "q2", "description": "Q2"}]
+        res = merge_questions(left, right)
+        assert len(res) == 2
+        assert res[0]["id"] == "q1"
+        assert res[1]["id"] == "q2"
+
+    def test_merge_questions_updates_existing(self):
+        from raa.state.schemas import merge_questions
+        left = [{"id": "q1", "description": "Q1", "resolution": None}]
+        right = [{"id": "q1", "resolution": "approved"}]
+        res = merge_questions(left, right)
+        assert len(res) == 1
+        assert res[0]["id"] == "q1"
+        assert res[0]["description"] == "Q1"
+        assert res[0]["resolution"] == "approved"
+
+    def test_merge_questions_handles_none(self):
+        from raa.state.schemas import merge_questions
+        assert merge_questions(None, [{"id": "q1"}]) == [{"id": "q1"}]
+        assert merge_questions([{"id": "q1"}], None) == [{"id": "q1"}]
+
+    def test_mapping_assigns_missing_ids(self):
+        questions = [
+            {"question_type": "change_risk", "description": "Risk"},
+        ]
+        updated, resolved = _map_answers_to_questions({"q_0_change_risk": "Approved"}, questions)
+        assert updated[0]["id"] == "q_0_change_risk"
+        assert updated[0]["resolution"] == "Approved"
+
+

@@ -1,5 +1,5 @@
 # generated: 2026-05-23
-# last_updated: 2026-05-23
+# last_updated: 2026-05-24
 # project: raa
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-23
-last_updated: 2026-05-23
+last_updated: 2026-05-24
 project: raa
 project_key: NOKEY
 tracking_system: file-system
@@ -56,14 +56,14 @@ development_status:
   2-5-cross-cutting-concern-promotion-and-saam-score-calibration: done
   2-6-skill-resource-bundle-and-tag-based-prompt-injection: done
   epic-2-retrospective: optional
-  epic-3: in-progress
+  epic-3: done
   3-1-open-question-classification-and-human-review-payload-generation: done
   3-2-indefinite-langgraph-interrupt-gate: done
-  3-3-authoritative-human-answer-mapping-and-conflict-resolution: review
+  3-3-authoritative-human-answer-mapping-and-conflict-resolution: done
   epic-3-retrospective: optional
-  epic-4: backlog
-  4-1-global-model-merge-and-principled-open-question-resolution: backlog
-  4-2-residual-requirements-decision-ladder: backlog
+  epic-4: in-progress
+  4-1-global-model-merge-and-principled-open-question-resolution: done
+  4-2-residual-requirements-decision-ladder: ready-for-dev
   4-3-100-percent-requirements-traceability-audit: backlog
   4-4-diagram-manifest-compile-and-c4-json-schema-validation: backlog
   epic-4-retrospective: optional

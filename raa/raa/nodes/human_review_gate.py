@@ -94,7 +94,7 @@ def _normalize_question(raw: dict, index: int) -> OpenQuestion:
     clean_metadata = _make_json_serializable(raw.get("metadata", {}))
 
     return OpenQuestion(
-        id=_generate_deterministic_id(index, raw),
+        id=raw.get("id") or _generate_deterministic_id(index, raw),
         question_type=question_type,
         description=description,
         context=clean_context,
