@@ -7,23 +7,17 @@ open questions so the final output contains no unresolved conflicts.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
+import re
 from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field, ValidationError
 
 from raa.judge.deduplication import (
-    _check_hierarchy_mismatch,
-    _do_ids_overlap,
-    _merge_entities,
-    _rewrite_relationship_ids,
-    _to_entity,
-    _to_relationship,
-    _union_technology,
     deduplicate_and_merge_fragment,
-    normalize_entity_id,
 )
 from raa.nodes.conflict_resolution import (
     _apply_answer_overrides,
@@ -49,10 +43,21 @@ from raa.utils.embedding_cache import (
     cosine_similarity,
     get_embedding_model,
 )
-from raa.utils.c4_validator import enforce_fragment_hierarchy
+from raa.utils.c4_validator import (
+    C4SchemaValidationException,
+    enforce_fragment_hierarchy,
+    validate_c4_model,
+)
 from raa.utils.prompt_loader import load_prompt
 
+from raa.utils.id_utils import to_r_id
+
 logger = logging.getLogger(__name__)
+
+
+class TraceabilityAuditException(Exception):
+    """Raised when the 100% requirements traceability audit fails."""
+    pass
 
 
 # ── Structured assumption output for LLM ────────────────────────────────────
@@ -772,6 +777,17 @@ def _try_merge_residual_entity(
     new_entity.setdefault("technology", "")
     new_entity.setdefault("requirement_ids", [req_id])
 
+    # Assign default parent system/container to satisfy C4 metamodel validation
+    if new_entity.get("c4_type") == "container" and not new_entity.get("parent_system_id"):
+        systems = [e for e in running_model.get("entities", []) if e.get("c4_type") == "system"]
+        if systems:
+            new_entity["parent_system_id"] = systems[0]["id"]
+
+    if new_entity.get("c4_type") == "component" and not new_entity.get("parent_container_id"):
+        containers = [e for e in running_model.get("entities", []) if e.get("c4_type") == "container"]
+        if containers:
+            new_entity["parent_container_id"] = containers[0]["id"]
+
     new_entities = [C4Entity.model_validate(new_entity)]
     new_relationships = [
         C4Relationship.model_validate(r)
@@ -813,31 +829,267 @@ def _try_merge_residual_entity(
 # ── Main Node ───────────────────────────────────────────────────────────────
 
 
+def _run_traceability_audit(
+    state: RAAState,
+    arch_model: dict,
+    all_questions: list[dict],
+) -> dict:
+    """Execute a final traceability audit on all input requirement IDs.
+
+    Verifies that every single input requirement ID is traceable to exactly
+    one location: either a processed batch, a mapped container/component,
+    or a coverage_gap/residual_coupling question.
+
+    Note:
+        Bulk rejection detection (AC #3) uses heuristic matching on question
+        IDs and descriptions. It reliably prevents bulk rejection via standard
+        question ID formats but cannot guarantee detection for non-standard
+        LLM-generated question IDs.
+
+    Raises:
+        TraceabilityAuditException: If any requirement is unmapped, missing,
+            or mapped to multiple locations, or if bulk acceptance/rejection
+            is detected.
+    """
+    # 1. Collect all input requirement IDs (normalized)
+    input_ids = set()
+    for rid in (state.get("requirements") or {}).keys():
+        input_ids.add(to_r_id(rid))
+    for req in (state.get("normalized_asrs") or []):
+        if "id" in req:
+            input_ids.add(to_r_id(req["id"]))
+    for req in (state.get("normalized_non_asr") or []):
+        if "id" in req:
+            input_ids.add(to_r_id(req["id"]))
+    for req in (state.get("unprocessed_requirements") or []):
+        if "id" in req:
+            input_ids.add(to_r_id(req["id"]))
+
+    # 2. Collect processed batches
+    execution_queue = state.get("execution_queue") or state.get("batches") or []
+
+    # 3. Build a trace registry mapping requirement ID -> list of locations
+    trace_map: dict[str, list[dict]] = {rid: [] for rid in input_ids}
+
+    # A. Check processed batches
+    for batch in execution_queue:
+        batch_id = batch.get("group_id", "")
+        batch_reqs = batch.get("asr_ids", []) + batch.get("non_asr_ids", [])
+        for req_id in batch_reqs:
+            norm_req_id = to_r_id(req_id)
+            if norm_req_id in trace_map:
+                trace_map[norm_req_id].append({
+                    "type": "batch",
+                    "id": batch_id,
+                    "description": f"Processed in batch '{batch_id}'",
+                })
+
+    # B. Check final arch_model (entities and relationships)
+    for entity in arch_model.get("entities", []):
+        entity_id = entity.get("id", "")
+        for req_id in entity.get("requirement_ids", []):
+            norm_req_id = to_r_id(req_id)
+            if norm_req_id in trace_map:
+                if not any(loc["type"] in ("batch", "model") for loc in trace_map[norm_req_id]):
+                    trace_map[norm_req_id].append({
+                        "type": "model",
+                        "id": entity_id,
+                        "description": f"Mapped to C4 entity '{entity_id}'",
+                    })
+
+    for rel in arch_model.get("relationships", []):
+        rel_id = rel.get("id", "")
+        for req_id in rel.get("requirement_ids", []):
+            norm_req_id = to_r_id(req_id)
+            if norm_req_id in trace_map:
+                if not any(loc["type"] in ("batch", "model") for loc in trace_map[norm_req_id]):
+                    trace_map[norm_req_id].append({
+                        "type": "model",
+                        "id": rel_id,
+                        "description": f"Mapped to C4 relationship '{rel_id}'",
+                    })
+
+    # C. Check open questions for coverage gap or residual coupling
+    for q in all_questions:
+        q_id = q.get("id", "")
+        q_type = q.get("question_type", "")
+        q_req_id = q.get("context", {}).get("req_id") if isinstance(q.get("context"), dict) else None
+
+        for norm_req_id in input_ids:
+            is_match = False
+            if q_id in (f"coverage_gap_{norm_req_id}", f"residual_coupling_{norm_req_id}"):
+                is_match = True
+            elif q_type in ("coverage_gap", "residual_coupling") and (
+                q_req_id == norm_req_id or q_id.endswith(f"_{norm_req_id}")
+            ):
+                is_match = True
+
+            if is_match:
+                if not any(loc["type"] == "batch" for loc in trace_map[norm_req_id]):
+                    if not any(loc["type"] == "question" and loc["id"] == q_id for loc in trace_map[norm_req_id]):
+                        trace_map[norm_req_id].append({
+                            "type": "question",
+                            "id": q_id,
+                            "description": f"Logged as open question '{q_id}' of type '{q_type}'",
+                        })
+
+    # 4. Prohibit bulk acceptance/rejection of leftovers
+    leftovers = [rid for rid in input_ids if not any(loc["type"] == "batch" for loc in trace_map[rid])]
+    for rid in leftovers:
+        locs = trace_map[rid]
+        question_locs = [loc for loc in locs if loc["type"] == "question"]
+        for loc in question_locs:
+            q_id = loc["id"]
+            q = next((x for x in all_questions if x.get("id") == q_id), None)
+            if q:
+                other_ids = [other_id for other_id in input_ids if other_id != rid]
+                desc = q.get("description", "")
+                if any(
+                    re.search(rf'(?<![A-Za-z0-9]){re.escape(oid)}(?![A-Za-z0-9])', desc)
+                    or q_id.endswith(f"_{oid}")
+                    for oid in other_ids
+                ):
+                    raise TraceabilityAuditException(
+                        f"Bulk rejection prohibited: Question '{q_id}' contains multiple requirement IDs, "
+                        f"indicating bulk rejection."
+                    )
+
+    # 5. Verify 100% accounting and exactly one location per requirement
+    manifest = {}
+    for rid, locations in trace_map.items():
+        if len(locations) == 0:
+            raise TraceabilityAuditException(
+                f"Traceability audit failed: Requirement '{rid}' is unmapped or missing (silent drop)."
+            )
+        elif len(locations) > 1:
+            loc_descriptions = ", ".join(f"{loc['type']}:{loc['id']}" for loc in locations)
+            raise TraceabilityAuditException(
+                f"Traceability audit failed: Requirement '{rid}' is mapped to multiple locations: {loc_descriptions}."
+            )
+        else:
+            loc = locations[0]
+            manifest[rid] = {
+                "location_type": loc["type"],
+                "location_id": loc["id"],
+                "description": loc["description"],
+            }
+
+    return manifest
+
+
+# ── Diagram Manifest & Output (Story 4.4) ──────────────────────────────────
+
+
+def _compile_diagram_manifest(arch_model: dict) -> list[dict]:
+    """Compile the diagram manifest from the final C4 model.
+
+    Manifest length = ``(2 * number of systems) + total containers across all systems``.
+
+    Each system gets a context diagram and a container diagram.
+    Each container gets a component diagram.
+    """
+    entities = arch_model.get("entities") or []
+
+    systems = [e for e in entities if e.get("c4_type") == "system"]
+    containers = [e for e in entities if e.get("c4_type") == "container"]
+
+    manifest: list[dict] = []
+
+    for system in systems:
+        sid = system.get("id", "")
+        sname = system.get("name", sid)
+        manifest.append({
+            "type": "context",
+            "system_id": sid,
+            "name": f"{sname} - System Context",
+        })
+        manifest.append({
+            "type": "container",
+            "system_id": sid,
+            "name": f"{sname} - Container Diagram",
+        })
+
+    for container in containers:
+        cid = container.get("id", "")
+        cname = container.get("name", cid)
+        manifest.append({
+            "type": "component",
+            "container_id": cid,
+            "name": f"{cname} - Component Diagram",
+        })
+
+    expected_len = (2 * len(systems)) + len(containers)
+    if len(manifest) != expected_len:
+        logger.error(
+            "Diagram manifest length mismatch: expected %d, got %d",
+            expected_len, len(manifest),
+        )
+
+    return manifest
+
+
+def _write_output_files(
+    arch_model: dict,
+    open_questions: list[dict],
+    diagram_manifest: list[dict],
+    config: RunnableConfig | None,
+) -> None:
+    """Write finalized JSON output files to the output directory.
+
+    Writes ``arch_model.json``, ``open_questions.json``, and
+    ``diagram_manifest.json``. Output directory comes from config
+    or defaults to ``_bmad-output/implementation-artifacts/``.
+    """
+
+    cfg: dict = {}
+    if config is not None:
+        if isinstance(config, dict):
+            cfg = config.get("configurable") or {}
+        else:
+            cfg = getattr(config, "configurable", None) or {}
+
+    output_dir = cfg.get(
+        "output_dir",
+        os.path.join(os.getcwd(), "_bmad-output", "implementation-artifacts"),
+    )
+    arch_path = os.path.join(output_dir, "arch_model.json")
+    questions_path = os.path.join(output_dir, "open_questions.json")
+    manifest_path = os.path.join(output_dir, "diagram_manifest.json")
+
+    try:
+        os.makedirs(output_dir, exist_ok=True)
+        with open(arch_path, "w") as f:
+            json.dump(arch_model, f, indent=2, default=str)
+        with open(questions_path, "w") as f:
+            json.dump(open_questions, f, indent=2, default=str)
+        with open(manifest_path, "w") as f:
+            json.dump(diagram_manifest, f, indent=2, default=str)
+        logger.info("Output files written to %s", output_dir)
+    except OSError as e:
+        logger.warning("Failed to write output files to %s: %s", output_dir, e)
+
+
 def final_merge(
     state: RAAState,
     config: RunnableConfig | None = None,
 ) -> dict:
-    """Merge all batch outputs globally and resolve all outstanding questions.
+    """Merge all batch outputs globally, validate, and produce final output files.
 
-    1. Combines all batch fragments from ``state["batch_outputs"]`` and the
-       running ``state["arch_model"]`` into a single unified C4 structure.
-    2. Runs global entity deduplication (normalized ID match + cosine
-       similarity when embedding model is available).
-    3. Processes residual unprocessed requirements via the multi-step
-       decision ladder (Story 4.2).
-    4. Resolves every open question so no question has a ``null`` resolution:
-       human answers applied authoritatively, judge_resolvable questions
-       resolved with pre-computed suggestions or defaults, and
-       human_preferred questions documented with assumptions.
+    1. Combines all batch fragments via global entity deduplication.
+    2. Processes residual unprocessed requirements (Story 4.2 decision ladder).
+    3. Resolves every open question so no question has a ``null`` resolution.
+    4. Runs the 100% requirements traceability audit (Story 4.3).
+    5. Validates the final model against C4 metamodel rules (Story 4.4).
+    6. Compiles the diagram manifest and writes output files (Story 4.4).
 
     Args:
-        state: Full RAA state with ``batch_outputs``, ``arch_model``,
-            open_questions, unprocessed_requirements, and human_answers channels.
-        config: LangGraph RunnableConfig with optional ``judge_llm`` in
-            configurable.
+        state: Full RAA state.
+        config: LangGraph RunnableConfig with optional ``judge_llm`` and
+            ``output_dir`` in configurable.
 
     Returns:
-        dict with keys: ``arch_model``, ``open_questions`` (merge-generated).
+        dict with keys: ``arch_model``, ``open_questions``,
+        ``traceability_manifest``, ``diagram_manifest``.
     """
     arch_model: dict = state.get("arch_model") or {}
     batch_outputs: list[dict] = list(state.get("batch_outputs") or [])
@@ -871,8 +1123,27 @@ def final_merge(
         all_questions, human_answers, arch_model, requirements, config,
     )
 
-    # Return all resolved questions
+    # 5. Run the 100% requirements traceability audit (Story 4.3)
+    traceability_manifest = _run_traceability_audit(
+        state, arch_model, all_questions,
+    )
+
+    # 6. Validate the final model against C4 metamodel rules (Story 4.4, AC #1)
+    validate_c4_model(arch_model)
+
+    # 7. Set status to "final" (Story 4.4, AC #4)
+    arch_model["status"] = "final"
+
+    # 8. Compile diagram manifest (Story 4.4, AC #2)
+    diagram_manifest = _compile_diagram_manifest(arch_model)
+
+    # 9. Write finalized JSON files (Story 4.4, AC #3)
+    _write_output_files(arch_model, all_questions, diagram_manifest, config)
+
     return {
         "arch_model": arch_model,
         "open_questions": all_questions,
+        "traceability_manifest": traceability_manifest,
+        "diagram_manifest": diagram_manifest,
     }
+

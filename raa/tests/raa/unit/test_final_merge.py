@@ -1,8 +1,11 @@
 """
-Unit tests for final merge node (Story 4.1 + Story 4.2).
+Unit tests for final merge node (Story 4.1 + 4.2 + 4.3 + 4.4).
 """
 from __future__ import annotations
 
+import json
+import os
+import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,9 +14,11 @@ from raa.nodes.final_merge import (
     DocumentedAssumption,
     ResidualArchitecturalCheck,
     ResidualCouplingCheck,
+    TraceabilityAuditException,
     _check_architectural,
     _check_coupling,
     _collect_entity_ids,
+    _compile_diagram_manifest,
     _extract_requirement_text,
     _generate_assumption,
     _get_default_suggestion,
@@ -26,9 +31,15 @@ from raa.nodes.final_merge import (
     _process_residual_requirements,
     _resolve_all_questions,
     _try_merge_residual_entity,
+    _write_output_files,
     final_merge,
 )
 from raa.state.models import C4Entity, C4Relationship
+from raa.utils.c4_validator import (
+    C4SchemaValidationException,
+    validate_c4_model,
+)
+
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
@@ -41,17 +52,21 @@ def _make_state(
     human_answers=None,
     review_mode="interactive",
     unprocessed_requirements=None,
+    requirements=None,
+    execution_queue=None,
+    normalized_asrs=None,
+    normalized_non_asr=None,
 ):
     return {
         "batch_cursor": 0,
         "quality_weights": {},
-        "requirements": {},
+        "requirements": requirements or {},
         "asrs": [],
         "non_asr": [],
         "condition_groups": [],
         "review_mode": review_mode,
-        "normalized_asrs": [],
-        "normalized_non_asr": [],
+        "normalized_asrs": normalized_asrs or [],
+        "normalized_non_asr": normalized_non_asr or [],
         "embeddings_ready": False,
         "batch_outputs": batch_outputs or [],
         "open_questions": open_questions or [],
@@ -61,7 +76,9 @@ def _make_state(
         "human_answers": human_answers or {},
         "human_review_payload": {},
         "unprocessed_requirements": unprocessed_requirements or [],
+        "execution_queue": execution_queue or [],
     }
+
 
 
 def _entity_dict(**overrides):
@@ -69,7 +86,7 @@ def _entity_dict(**overrides):
         "id": "svc-1",
         "name": "Service 1",
         "description": "A backend service for user management",
-        "c4_type": "container",
+        "c4_type": "system",
         "technology": "Python",
         "requirement_ids": ["R1"],
     }
@@ -559,7 +576,7 @@ class TestFinalMerge:
                 },
             ],
             arch_model={
-                "entities": [{"id": "e1", "name": "E1", "metadata": {}}],
+                "entities": [{"id": "e1", "name": "E1", "c4_type": "system", "metadata": {}}],
                 "relationships": [],
             },
         )
@@ -639,6 +656,18 @@ def _req(**overrides):
     return defaults
 
 
+def _system(**overrides):
+    defaults = {
+        "id": "system-1",
+        "name": "Main System",
+        "description": "Main System Description",
+        "c4_type": "system",
+        "requirement_ids": [],
+    }
+    defaults.update(overrides)
+    return defaults
+
+
 def _container(**overrides):
     """Create a minimal container entity dict."""
     defaults = {
@@ -647,6 +676,7 @@ def _container(**overrides):
         "description": "Handles real-time event streaming and message delivery",
         "c4_type": "container",
         "technology": "Kafka",
+        "parent_system_id": "system-1",
         "requirement_ids": ["R1", "R2"],
     }
     defaults.update(overrides)
@@ -656,7 +686,7 @@ def _container(**overrides):
 def _model(**overrides):
     """Create a minimal arch_model dict."""
     defaults: dict = {
-        "entities": [_container()],
+        "entities": [_container(parent_system_id="system-1"), _system()],
         "relationships": [],
         "boundary_groups": [],
         "assumption_flags": [],
@@ -1043,7 +1073,7 @@ class TestProcessResidualRequirements:
 
     def test_sequential_processing_multiple_requirements(self):
         """AC #1: Verify sequential evaluation of multiple unprocessed reqs."""
-        model = _model()
+        model = {"entities": [_container()], "relationships": []}
         reqs = [
             _req(id="R100", description="Event streaming delivery"),
             _req(id="R200", description="New payment gateway system needed"),
@@ -1192,7 +1222,7 @@ class TestFinalMergeWithResiduals:
     def test_residual_processing_integrated_in_flow(self):
         state = _make_state(
             batch_outputs=[
-                {"entities": [_container(id="svc-a")], "relationships": []},
+                {"entities": [_container(id="svc-a", c4_type="system")], "relationships": []},
             ],
             arch_model={"entities": [], "relationships": []},
             open_questions=[],
@@ -1210,7 +1240,7 @@ class TestFinalMergeWithResiduals:
 
     def test_empty_unprocessed_no_effect(self):
         state = _make_state(
-            batch_outputs=[{"entities": [_container(id="a")], "relationships": []}],
+            batch_outputs=[{"entities": [_container(id="a", c4_type="system")], "relationships": []}],
             arch_model={"entities": [], "relationships": []},
             open_questions=[],
             unprocessed_requirements=[],
@@ -1225,8 +1255,8 @@ class TestFinalMergeWithResiduals:
         """Verify that all merge-generated and residual-generated questions are resolved in the output."""
         state = _make_state(
             batch_outputs=[
-                {"entities": [_container(id="svc-a", description="Auth Service")], "relationships": []},
-                {"entities": [_container(id="svc_a", description="Auth Service Core")], "relationships": []},
+                {"entities": [_container(id="svc-a", c4_type="system", description="Auth Service")], "relationships": []},
+                {"entities": [_container(id="svc_a", c4_type="system", description="Auth Service Core")], "relationships": []},
             ],
             arch_model={"entities": [], "relationships": []},
             open_questions=[],
@@ -1265,3 +1295,693 @@ class TestFinalMergeWithResiduals:
 
         # Verify cache.store_vector was called for container embedding
         mock_cache.store_vector.assert_any_call("container-1", "hash123", [0.1] * 1024)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Story 4.3: 100% Requirements Traceability Audit Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestTraceabilityAudit:
+    def test_successful_audit_processed_batch(self):
+        state = _make_state(
+            requirements={"R1": "Requirement 1 description"},
+            execution_queue=[{
+                "group_id": "batch-1",
+                "asr_ids": ["R1"],
+                "non_asr_ids": [],
+            }],
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            result = final_merge(state)
+        
+        assert "traceability_manifest" in result
+        assert result["traceability_manifest"]["R1"] == {
+            "location_type": "batch",
+            "location_id": "batch-1",
+            "description": "Processed in batch 'batch-1'",
+        }
+
+    def test_successful_audit_mapped_entity(self):
+        state = _make_state(
+            requirements={"R1": "Requirement 1 description"},
+            unprocessed_requirements=[{
+                "id": "R1",
+                "description": "Requirement 1 description",
+            }],
+            arch_model={
+                "entities": [{
+                    "id": "entity-1",
+                    "name": "Entity 1",
+                    "c4_type": "system",
+                    "requirement_ids": ["R1"],
+                }],
+                "relationships": [],
+            },
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            # Mock check_architectural to return True
+            with patch("raa.nodes.final_merge._check_architectural", return_value=(True, None, [], "")):
+                # Mock deduplicate_and_merge_fragment to return the model with R1 mapped
+                with patch(
+                    "raa.nodes.final_merge.deduplicate_and_merge_fragment",
+                    return_value=({
+                        "entities": [{
+                            "id": "entity-1",
+                            "name": "Entity 1",
+                            "c4_type": "system",
+                            "requirement_ids": ["R1"],
+                        }],
+                        "relationships": [],
+                    }, [], [])
+                ):
+                    result = final_merge(state)
+
+        assert "traceability_manifest" in result
+        assert result["traceability_manifest"]["R1"] == {
+            "location_type": "model",
+            "location_id": "entity-1",
+            "description": "Mapped to C4 entity 'entity-1'",
+        }
+
+    def test_successful_audit_coverage_gap_question(self):
+        state = _make_state(
+            requirements={"R1": "Requirement 1 description"},
+            unprocessed_requirements=[{
+                "id": "R1",
+                "description": "Requirement 1 description",
+            }],
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            # Force R1 to go to coverage gap
+            with patch("raa.nodes.final_merge._check_architectural", return_value=(False, None, [], "non-architectural")):
+                result = final_merge(state)
+
+        assert "traceability_manifest" in result
+        assert result["traceability_manifest"]["R1"]["location_type"] == "question"
+        assert "R1" in result["traceability_manifest"]["R1"]["location_id"]
+
+    def test_audit_fails_unmapped_requirement(self):
+        state = _make_state(
+            requirements={"R1": "Requirement 1 description"},
+            execution_queue=[],
+        )
+        with pytest.raises(TraceabilityAuditException) as exc_info:
+            with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+                final_merge(state)
+        
+        assert "unmapped or missing" in str(exc_info.value)
+
+    def test_audit_fails_multiple_locations(self):
+        state = _make_state(
+            requirements={"R1": "Requirement 1 description"},
+            execution_queue=[
+                {
+                    "group_id": "batch-1",
+                    "asr_ids": ["R1"],
+                    "non_asr_ids": [],
+                },
+                {
+                    "group_id": "batch-2",
+                    "asr_ids": ["R1"],
+                    "non_asr_ids": [],
+                }
+            ],
+        )
+        with pytest.raises(TraceabilityAuditException) as exc_info:
+            with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+                final_merge(state)
+        
+        assert "mapped to multiple locations" in str(exc_info.value)
+
+    def test_audit_fails_bulk_rejection(self):
+        state = _make_state(
+            requirements={"R1": "Req 1", "R2": "Req 2"},
+            unprocessed_requirements=[
+                {"id": "R1", "description": "Req 1"},
+                {"id": "R2", "description": "Req 2"},
+            ],
+            open_questions=[
+                {
+                    "id": "coverage_gap_R1_R2",
+                    "question_type": "coverage_gap",
+                    "description": "Bulk exclusion of R1 and R2",
+                    "context": {"req_id": "R1"},
+                }
+            ]
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            with patch(
+                "raa.nodes.final_merge._process_residual_requirements",
+                return_value=({"entities": [], "relationships": []}, [
+                    {
+                        "id": "coverage_gap_R1_R2",
+                        "question_type": "coverage_gap",
+                        "description": "Bulk exclusion of R1 and R2",
+                        "context": {"req_id": "R1"},
+                    }
+                ])
+            ):
+                with pytest.raises(TraceabilityAuditException) as exc_info:
+                    final_merge(state)
+
+        assert "Bulk rejection prohibited" in str(exc_info.value)
+
+    def test_successful_audit_normalized_non_asr_source(self):
+        """ECH-5: Verify normalized_non_asr IDs are collected and audited."""
+        state = _make_state(
+            normalized_non_asr=[{
+                "id": "R99",
+                "description": "Non-ASR requirement sourced exclusively from normalized_non_asr",
+            }],
+            execution_queue=[{
+                "group_id": "batch-99",
+                "asr_ids": [],
+                "non_asr_ids": ["R99"],
+            }],
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            result = final_merge(state)
+
+        assert "traceability_manifest" in result
+        assert result["traceability_manifest"]["R99"] == {
+            "location_type": "batch",
+            "location_id": "batch-99",
+            "description": "Processed in batch 'batch-99'",
+        }
+
+    def test_audit_fails_unmapped_normalized_non_asr(self):
+        """ECH-5: normalized_non_asr IDs that are not traced must fail audit."""
+        state = _make_state(
+            normalized_non_asr=[{
+                "id": "R99",
+                "description": "Non-ASR requirement not in any batch or model",
+            }],
+            execution_queue=[],
+        )
+        with pytest.raises(TraceabilityAuditException) as exc_info:
+            with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+                final_merge(state)
+
+        assert "unmapped or missing" in str(exc_info.value)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Story 4.4: C4 Schema Validation & Diagram Manifest Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# ── C4 Schema Validation ─────────────────────────────────────────────────────
+
+
+class TestValidateC4Model:
+    def test_valid_model_passes(self):
+        """AC #1: Valid model with proper hierarchy passes validation."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "System", "c4_type": "system"},
+                {
+                    "id": "ctr-1", "name": "Container", "c4_type": "container",
+                    "parent_system_id": "sys-1",
+                },
+                {
+                    "id": "cmp-1", "name": "Component", "c4_type": "component",
+                    "parent_container_id": "ctr-1",
+                },
+            ],
+            "relationships": [
+                {
+                    "id": "rel-1", "source_id": "sys-1", "target_id": "ctr-1",
+                    "description": "contains", "relationship_type": "contains",
+                    "diagram_scope": "container",
+                },
+            ],
+        }
+        validate_c4_model(model)  # Should not raise
+
+    def test_invalid_entity_fails(self):
+        """Invalid C4Entity raises C4SchemaValidationException."""
+        model = {
+            "entities": [{"id": "bad", "c4_type": "invalid_type"}],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "failed C4Entity validation" in str(exc_info.value)
+
+    def test_non_dict_entity_fails(self):
+        """Non-dict entity raises C4SchemaValidationException."""
+        model = {"entities": ["not_a_dict"], "relationships": []}
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "not a dict" in str(exc_info.value)
+
+    def test_invalid_relationship_fails(self):
+        """Invalid C4Relationship raises C4SchemaValidationException."""
+        model = {
+            "entities": [{"id": "e1", "name": "E1"}],
+            "relationships": [{"id": "bad-rel"}],  # Missing source_id, target_id
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "failed C4Relationship validation" in str(exc_info.value)
+
+    def test_component_missing_parent_container_fails(self):
+        """Component without parent_container_id raises exception."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "System", "c4_type": "system"},
+                {
+                    "id": "cmp-1", "name": "Component", "c4_type": "component",
+                    # Missing parent_container_id
+                },
+            ],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "no parent_container_id" in str(exc_info.value)
+
+    def test_component_missing_parent_container_not_found_fails(self):
+        """Component with non-existent parent container raises exception."""
+        model = {
+            "entities": [
+                {
+                    "id": "cmp-1", "name": "Component", "c4_type": "component",
+                    "parent_container_id": "non-existent-ctr",
+                },
+            ],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "references missing parent container" in str(exc_info.value)
+
+    def test_container_missing_parent_system_fails(self):
+        """Container referencing non-existent parent system raises exception."""
+        model = {
+            "entities": [
+                {
+                    "id": "ctr-1", "name": "Container", "c4_type": "container",
+                    "parent_system_id": "non-existent-sys",
+                },
+            ],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "references missing parent system" in str(exc_info.value)
+
+    def test_relationship_unknown_source_fails(self):
+        """Relationship with unknown source raises exception."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "System", "c4_type": "system"},
+            ],
+            "relationships": [
+                {
+                    "id": "rel-1", "source_id": "unknown", "target_id": "sys-1",
+                    "description": "uses", "relationship_type": "uses",
+                },
+            ],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "unknown source entity" in str(exc_info.value)
+
+    def test_relationship_scope_mismatch_fails(self):
+        """Relationship with wrong scope raises exception."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "System", "c4_type": "system"},
+                {
+                    "id": "ctr-1", "name": "Container", "c4_type": "container",
+                    "parent_system_id": "sys-1",
+                },
+                {
+                    "id": "cmp-1", "name": "Component", "c4_type": "component",
+                    "parent_container_id": "ctr-1",
+                },
+            ],
+            "relationships": [
+                {
+                    "id": "rel-1", "source_id": "sys-1", "target_id": "cmp-1",
+                    "description": "uses", "relationship_type": "uses",
+                    "diagram_scope": "context",  # Wrong: component endpoint → should be "component"
+                },
+            ],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "require scope" in str(exc_info.value)
+
+    def test_empty_model_passes(self):
+        """Empty model (no entities, no relationships) passes validation."""
+        validate_c4_model({"entities": [], "relationships": []})
+
+    def test_container_without_system_id_fails(self):
+        """Container without parent_system_id raises exception."""
+        model = {
+            "entities": [
+                {"id": "ctr-1", "name": "Container", "c4_type": "container"},
+            ],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "has no parent_system_id" in str(exc_info.value)
+
+    def test_invalid_c4_type_fails(self):
+        """Entity with invalid c4_type raises C4SchemaValidationException."""
+        model = {
+            "entities": [
+                {"id": "bad", "name": "Bad Entity", "c4_type": "invalid_type"},
+            ],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "invalid c4_type" in str(exc_info.value)
+
+    def test_component_parent_not_container_fails(self):
+        """Component referencing non-container parent raises exception."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "System", "c4_type": "system"},
+                {
+                    "id": "cmp-1", "name": "Component", "c4_type": "component",
+                    "parent_container_id": "sys-1",  # Invalid parent type: system
+                },
+            ],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "references parent" in str(exc_info.value)
+        assert "not a 'container'" in str(exc_info.value)
+
+    def test_container_parent_not_system_fails(self):
+        """Container referencing non-system parent raises exception."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "System", "c4_type": "system"},
+                {
+                    "id": "ctr-1", "name": "Container", "c4_type": "container",
+                    "parent_system_id": "sys-1",
+                },
+                {
+                    "id": "ctr-2", "name": "Container 2", "c4_type": "container",
+                    "parent_system_id": "ctr-1",  # Invalid parent type: container
+                },
+            ],
+            "relationships": [],
+        }
+        with pytest.raises(C4SchemaValidationException) as exc_info:
+            validate_c4_model(model)
+        assert "references parent" in str(exc_info.value)
+        assert "not a 'system'" in str(exc_info.value)
+
+
+# ── Diagram Manifest Compilation ─────────────────────────────────────────────
+
+
+class TestCompileDiagramManifest:
+    def test_empty_model_produces_empty_manifest(self):
+        model = {"entities": []}
+        manifest = _compile_diagram_manifest(model)
+        assert manifest == []
+
+    def test_one_system_no_containers(self):
+        """One system: 2 entries (context + container). No container diagrams."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "My System", "c4_type": "system"},
+            ],
+        }
+        manifest = _compile_diagram_manifest(model)
+        assert len(manifest) == 2
+        types = [e["type"] for e in manifest]
+        assert types == ["context", "container"]
+        assert manifest[0]["name"] == "My System - System Context"
+        assert manifest[1]["name"] == "My System - Container Diagram"
+
+    def test_one_system_one_container(self):
+        """One system + one container: 2 + 1 = 3 entries."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "Sys", "c4_type": "system"},
+                {
+                    "id": "ctr-1", "name": "API", "c4_type": "container",
+                    "parent_system_id": "sys-1",
+                },
+            ],
+        }
+        manifest = _compile_diagram_manifest(model)
+        assert len(manifest) == 3  # (2*1) + 1
+        types = [e["type"] for e in manifest]
+        assert types == ["context", "container", "component"]
+        assert manifest[2]["name"] == "API - Component Diagram"
+        assert manifest[2]["container_id"] == "ctr-1"
+
+    def test_two_systems_three_containers(self):
+        """AC #2: Verify exact manifest length formula."""
+        model = {
+            "entities": [
+                {"id": "sys-a", "name": "A", "c4_type": "system"},
+                {"id": "sys-b", "name": "B", "c4_type": "system"},
+                {
+                    "id": "ctr-1", "name": "C1", "c4_type": "container",
+                    "parent_system_id": "sys-a",
+                },
+                {
+                    "id": "ctr-2", "name": "C2", "c4_type": "container",
+                    "parent_system_id": "sys-a",
+                },
+                {
+                    "id": "ctr-3", "name": "C3", "c4_type": "container",
+                    "parent_system_id": "sys-b",
+                },
+            ],
+        }
+        manifest = _compile_diagram_manifest(model)
+        expected_len = (2 * 2) + 3  # 7
+        assert len(manifest) == expected_len
+        # Verify system diagrams come before component diagrams
+        context_types = [e["type"] for e in manifest]
+        assert context_types[0] == "context"
+        assert context_types[1] == "container"
+        assert context_types[2] == "context"
+        assert context_types[3] == "container"
+        assert context_types[4:] == ["component", "component", "component"]
+
+    def test_non_system_entities_ignored(self):
+        """Only system and container entities contribute to manifest."""
+        model = {
+            "entities": [
+                {"id": "sys-1", "name": "S", "c4_type": "system"},
+                {
+                    "id": "cmp-1", "name": "C", "c4_type": "component",
+                    "parent_container_id": "ctr-1",
+                },
+                {"id": "p-1", "name": "User", "c4_type": "person"},
+            ],
+        }
+        manifest = _compile_diagram_manifest(model)
+        # Only 1 system, 0 containers → 2 entries
+        assert len(manifest) == 2
+
+
+# ── Write Output Files ───────────────────────────────────────────────────────
+
+
+class TestWriteOutputFiles:
+    def test_writes_all_three_files(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config = {"configurable": {"output_dir": tmpdir}}
+            _write_output_files(
+                {"entities": [], "status": "final"},
+                [{"id": "q1", "question_type": "coverage_gap"}],
+                [{"type": "context", "system_id": "s1"}],
+                config,
+            )
+            assert os.path.isfile(os.path.join(tmpdir, "arch_model.json"))
+            assert os.path.isfile(os.path.join(tmpdir, "open_questions.json"))
+            assert os.path.isfile(os.path.join(tmpdir, "diagram_manifest.json"))
+
+    def test_arch_model_json_content(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model = {"entities": [{"id": "e1"}], "status": "final"}
+            config = {"configurable": {"output_dir": tmpdir}}
+            _write_output_files(model, [], [], config)
+            with open(os.path.join(tmpdir, "arch_model.json")) as f:
+                written = json.load(f)
+            assert written["status"] == "final"
+            assert written["entities"] == [{"id": "e1"}]
+
+    def test_open_questions_json_content(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            questions = [{"id": "q1", "resolution": "Resolved by judge"}]
+            config = {"configurable": {"output_dir": tmpdir}}
+            _write_output_files({}, questions, [], config)
+            with open(os.path.join(tmpdir, "open_questions.json")) as f:
+                written = json.load(f)
+            assert written[0]["id"] == "q1"
+            assert written[0]["resolution"] == "Resolved by judge"
+
+    def test_diagram_manifest_json_content(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            manifest = [{"type": "context", "system_id": "s1", "name": "S1 - Context"}]
+            config = {"configurable": {"output_dir": tmpdir}}
+            _write_output_files({}, [], manifest, config)
+            with open(os.path.join(tmpdir, "diagram_manifest.json")) as f:
+                written = json.load(f)
+            assert written[0]["type"] == "context"
+            assert written[0]["system_id"] == "s1"
+
+    def test_creates_output_dir_if_missing(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            new_dir = os.path.join(tmpdir, "nested", "output")
+            config = {"configurable": {"output_dir": new_dir}}
+            _write_output_files({}, [], [], config)
+            assert os.path.isdir(new_dir)
+            assert os.path.isfile(os.path.join(new_dir, "arch_model.json"))
+
+    def test_os_error_handled_gracefully(self):
+        """OSError during file write logs warning but does not crash."""
+        # Use a path where directory exists but is a file (not a directory)
+        with tempfile.NamedTemporaryFile() as tmpfile:
+            config = {"configurable": {"output_dir": tmpfile.name}}
+            # Should not raise — os.makedirs will fail because path is a file
+            _write_output_files({}, [], [], config)
+
+
+# ── Final Merge Integration (Story 4.4) ─────────────────────────────────────
+
+
+class TestFinalMergeStory44:
+    def test_validates_model_and_sets_status_final(self):
+        """AC #1, #4: final_merge validates model and sets status to 'final'."""
+        state = _make_state(
+            batch_outputs=[
+                {
+                    "entities": [
+                        {
+                            "id": "sys-1", "name": "System", "c4_type": "system",
+                            "requirement_ids": ["R1"],
+                        },
+                    ],
+                    "relationships": [],
+                },
+            ],
+            arch_model={"entities": [], "relationships": []},
+            open_questions=[],
+            normalized_asrs=[{"id": "R1", "description": "Req 1"}],
+            normalized_non_asr=[],
+            unprocessed_requirements=[],
+        )
+        # Must mock _write_output_files to avoid actual disk writes
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            with patch("raa.nodes.final_merge._write_output_files"):
+                result = final_merge(state)
+
+        assert result["arch_model"]["status"] == "final"
+        assert "diagram_manifest" in result
+
+    def test_diagram_manifest_included_in_result(self):
+        """AC #2: Diagram manifest is returned in final_merge output."""
+        state = _make_state(
+            batch_outputs=[
+                {
+                    "entities": [
+                        {
+                            "id": "sys-1", "name": "Main", "c4_type": "system",
+                            "requirement_ids": ["R1"],
+                        },
+                        {
+                            "id": "ctr-1", "name": "API", "c4_type": "container",
+                            "parent_system_id": "sys-1", "requirement_ids": ["R2"],
+                        },
+                    ],
+                    "relationships": [],
+                },
+            ],
+            arch_model={"entities": [], "relationships": []},
+            open_questions=[],
+            normalized_asrs=[
+                {"id": "R1", "description": "Req 1"},
+                {"id": "R2", "description": "Req 2"},
+            ],
+            normalized_non_asr=[],
+            unprocessed_requirements=[],
+            execution_queue=[{
+                "group_id": "batch-1",
+                "asr_ids": ["R1", "R2"],
+                "non_asr_ids": [],
+            }],
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            with patch("raa.nodes.final_merge._write_output_files"):
+                result = final_merge(state)
+
+        manifest = result["diagram_manifest"]
+        # 1 system + 1 container → (2*1) + 1 = 3 entries
+        assert len(manifest) == 3
+
+    def test_validation_failure_propagates(self):
+        """AC #1: Schema validation failure raises C4SchemaValidationException."""
+        state = _make_state(
+            batch_outputs=[
+                {
+                    "entities": [
+                        {
+                            "id": "cmp-1", "name": "Component", "c4_type": "component",
+                            "requirement_ids": ["R1"],
+                            # Missing parent_container_id
+                        },
+                    ],
+                    "relationships": [],
+                },
+            ],
+            arch_model={"entities": [], "relationships": []},
+            open_questions=[],
+            normalized_asrs=[{"id": "R1", "description": "Req 1"}],
+            normalized_non_asr=[],
+            unprocessed_requirements=[],
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            with patch("raa.nodes.final_merge._write_output_files"):
+                with pytest.raises(C4SchemaValidationException) as exc_info:
+                    final_merge(state)
+        assert "no parent_container_id" in str(exc_info.value)
+
+    def test_traceability_manifest_included(self):
+        """AC #4: Traceability manifest is still present after 4.4 additions."""
+        state = _make_state(
+            batch_outputs=[
+                {
+                    "entities": [
+                        {
+                            "id": "sys-1", "name": "S", "c4_type": "system",
+                            "requirement_ids": ["R1"],
+                        },
+                    ],
+                    "relationships": [],
+                },
+            ],
+            arch_model={"entities": [], "relationships": []},
+            open_questions=[],
+            normalized_asrs=[{"id": "R1", "description": "Req 1"}],
+            normalized_non_asr=[],
+            unprocessed_requirements=[],
+            execution_queue=[{
+                "group_id": "batch-1",
+                "asr_ids": ["R1"],
+                "non_asr_ids": [],
+            }],
+        )
+        with patch("raa.nodes.final_merge._init_embeddings", return_value=(None, None)):
+            with patch("raa.nodes.final_merge._write_output_files"):
+                result = final_merge(state)
+
+        assert "traceability_manifest" in result
+        assert "R1" in result["traceability_manifest"]
+

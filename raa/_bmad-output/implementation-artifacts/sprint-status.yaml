@@ -61,9 +61,9 @@ development_status:
   3-2-indefinite-langgraph-interrupt-gate: done
   3-3-authoritative-human-answer-mapping-and-conflict-resolution: done
   epic-3-retrospective: optional
-  epic-4: in-progress
+  epic-4: done
   4-1-global-model-merge-and-principled-open-question-resolution: done
   4-2-residual-requirements-decision-ladder: done
-  4-3-100-percent-requirements-traceability-audit: backlog
-  4-4-diagram-manifest-compile-and-c4-json-schema-validation: backlog
+  4-3-100-percent-requirements-traceability-audit: done
+  4-4-diagram-manifest-compile-and-c4-json-schema-validation: done
   epic-4-retrospective: optional
