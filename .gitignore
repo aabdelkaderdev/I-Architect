@@ -23,7 +23,6 @@ embeddings/
 
 # Pip & package artifacts
 =0.8.0
-Skills/
 plans_done/
 *.egg-info/
 
