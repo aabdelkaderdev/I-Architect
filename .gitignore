@@ -1,36 +1,49 @@
-# Python bytecode
+# Python bytecode & cache
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
 
-# Model weights (run ./download_model.sh to fetch)
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Model weights & archives
 arlo/models/
-models.7z
+/models/
+*.7z
 
-# Lock files
+# Lock files & databases
 skills-lock.json
 uv.lock
 embeddings/
 
-
-# Pip artifacts
+# Pip & package artifacts
 =0.8.0
-
-# Project directories
-Skills/
 plans_done/
-arlo.egg-info/
+*.egg-info/
 
 # Virtual environment
 .venv/
 
-# AI / Agent tooling
+# AI / Agent tooling & sessions
 .claude/
 .agents/
 .codex/
+*sessiontoken
+
+# Temporary / Output / Scratch folders
+_bmad-output/
+scratch/
+test_project/
+_old_bmad_work/
+matrix.json
 
 # Misc
 Miscellenious/
-codexsessiontoken
-claudecodesessiontoken
 arlo_*_graph.png
 checkpoints/
+
