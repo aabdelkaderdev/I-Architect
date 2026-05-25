@@ -21,7 +21,7 @@ from arlo.state.schemas import ARLOState
 logger = logging.getLogger(__name__)
 
 _MODEL_NAME = "mixedbread-ai/mxbai-embed-large-v1"
-_CACHE_DIR = Path(__file__).parent.parent.parent / "models"  # → /models/
+_CACHE_DIR = Path(__file__).resolve().parent.parent.parent / "models"
 
 # Module-level singleton — initialized once on first call.
 _embedding_model: TextEmbedding | None = None
