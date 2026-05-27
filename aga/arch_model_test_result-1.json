@@ -1,0 +1,2002 @@
+{
+  "entities": [
+    {
+      "id": "sys-1",
+      "name": "System",
+      "description": "Core software system owned by the organization",
+      "c4_type": "system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R9",
+        "R14",
+        "R25",
+        "R29",
+        "R30"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_sys-1",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "ext1",
+      "name": "External Security Service",
+      "description": "Third-party service providing security capabilities under any circumstances",
+      "c4_type": "external_system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R30",
+        "R9"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_ext1",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "ext-2",
+      "name": "External Payment Gateway",
+      "description": "Third-party payment processing service",
+      "c4_type": "external_system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R14",
+        "R29"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_ext-2",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "person1",
+      "name": "System User",
+      "description": "Human actor interacting with the system",
+      "c4_type": "person",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R14",
+        "R25",
+        "R29",
+        "R30",
+        "R9"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_person-customer_person1",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "container1",
+      "name": "Web Application",
+      "description": "Deployable web application container handling user interactions and core business logic",
+      "c4_type": "container",
+      "technology": "Web Server",
+      "parent_system_id": "sys1",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R14",
+        "R25",
+        "R29",
+        "R30",
+        "R9"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_container1",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "container2",
+      "name": "API Gateway",
+      "description": "Deployable API gateway container managing secure access and routing",
+      "c4_type": "container",
+      "technology": "API Gateway",
+      "parent_system_id": "sys1",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R30",
+        "R9"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_container2",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "container-3",
+      "name": "Database",
+      "description": "Persistent data storage for the system",
+      "c4_type": "container",
+      "technology": "Database",
+      "parent_system_id": "sys-1",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R25",
+        "R14"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_container-3",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "component-1",
+      "name": "Authentication Module",
+      "description": "Handles user authentication and authorization",
+      "c4_type": "component",
+      "technology": "Auth Library",
+      "parent_system_id": null,
+      "parent_container_id": "container2",
+      "requirement_ids": [
+        "R9",
+        "R30"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_police-officer_component-1",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "component-2",
+      "name": "Payment Processing Module",
+      "description": "Handles payment transactions efficiently",
+      "c4_type": "component",
+      "technology": "Payment SDK",
+      "parent_system_id": null,
+      "parent_container_id": "container1",
+      "requirement_ids": [
+        "R14",
+        "R29"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_component-2",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "component-3",
+      "name": "Data Access Layer",
+      "description": "Manages database read/write operations with reliability (Supports R11: Backup and recovery procedures must be robust to prevent data loss and ensure system reliability in case of failures.)",
+      "c4_type": "component",
+      "technology": "ORM",
+      "parent_system_id": null,
+      "parent_container_id": "container-3",
+      "requirement_ids": [
+        "R25",
+        "R14",
+        "R11"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_redundancy-container_component-3",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "sys1",
+      "name": "System Under Design",
+      "description": "Core system addressing security, cost efficiency, performance, reliability, and compatibility requirements",
+      "c4_type": "system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R9",
+        "R14",
+        "R25",
+        "R29",
+        "R30"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_sys1",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "container3",
+      "name": "Data Store",
+      "description": "Deployable data storage container optimized for cost and performance efficiency",
+      "c4_type": "container",
+      "technology": "",
+      "parent_system_id": "sys1",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R14",
+        "R25",
+        "R29"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_container3",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "public-user",
+      "name": "Public User",
+      "description": "A member of the public who accesses the system during high-demand periods such as public events or emergencies",
+      "c4_type": "person",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R23",
+        "R24",
+        "public-user"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "source": "bridge_requirement",
+        "boundary_group_id": "bg_sys-billing_public-user",
+        "bridge_requirement": "public-user",
+        "batch_id": "cluster_0_group_3",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "high-demand-system",
+      "name": "High-Demand System",
+      "description": "Software system that handles high-demand periods during public events or emergencies, ensuring performance efficiency and reliability",
+      "c4_type": "system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R24"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_high-demand-system",
+        "batch_id": "cluster_0_group_3",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "high-demand-container",
+      "name": "High-Demand Service Container",
+      "description": "Deployable unit responsible for handling traffic surges during public events or emergencies, ensuring performance efficiency and reliability",
+      "c4_type": "container",
+      "technology": "Clustering / Failover, Load Balancer",
+      "parent_system_id": "high-demand-system",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R24"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_high-demand-container",
+        "batch_id": "cluster_0_group_3",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "police-officer",
+      "name": "Police Officer",
+      "description": "A human actor who uses the system, potentially over public or unsecured networks",
+      "c4_type": "person",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R10",
+        "R23"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "source_batch": "cluster_0_group_0",
+        "boundary_group_id": "bg_sys-billing_police-officer",
+        "source": "bridge_requirement",
+        "bridge_requirement": "officer",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "system",
+      "name": "System",
+      "description": "The software system used by police officers to perform their duties (Supports R12: Officers can directly attach photos and videos to their incident reports through the system interface.)",
+      "c4_type": "system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R23",
+        "R12"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "source": "bridge_requirement",
+        "boundary_group_id": "bg_sys-billing_system",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "secure-gateway",
+      "name": "Secure Gateway",
+      "description": "A container that provides secure access control and encryption for communications over public or unsecured networks",
+      "c4_type": "container",
+      "technology": "TLS/SSL, VPN",
+      "parent_system_id": "system",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R23"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_secure-gateway",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "authentication-service",
+      "name": "Authentication Service",
+      "description": "A component within the Secure Gateway that handles authentication of officers and public users accessing the system",
+      "c4_type": "component",
+      "technology": "OAuth 2.0, JWT",
+      "parent_system_id": null,
+      "parent_container_id": "secure-gateway",
+      "requirement_ids": [
+        "R23"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_authentication-service",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "encryption-module",
+      "name": "Encryption Module",
+      "description": "A component that encrypts data in transit over public or unsecured networks",
+      "c4_type": "component",
+      "technology": "AES-256, TLS 1.3",
+      "parent_system_id": null,
+      "parent_container_id": "secure-gateway",
+      "requirement_ids": [
+        "R23"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_encryption-module",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "secure-communication-module",
+      "name": "Secure Communication Module",
+      "description": "Handles secure data transmission when officers use public or unsecured networks",
+      "c4_type": "container",
+      "technology": "TLS/HTTPS",
+      "parent_system_id": "system",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R23"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "confidence": "inferred from security requirement",
+        "boundary_group_id": "bg_person-police-officer_secure-communication-module",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "system-incident-management",
+      "name": "Incident Management System",
+      "description": "Software system that handles fluctuating numbers of active officers and incidents, ensuring performance and cost efficiency (Supports R18: The system must process and analyze incident data efficiently to provide timely and relevant information to officers in the field.) (Supports R20: Officers should be able to customize their dashboard to access the most relevant information quickly.) (Supports R27: The system must provide officers with clear, actionable notifications and alerts during critical situations.) (Supports R28: The system shall provide officers access to historical data and analytics on past incidents and outcomes for informed decision-making.)",
+      "c4_type": "system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R10",
+        "R18",
+        "R20",
+        "R27",
+        "R28"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_system-incident-management",
+        "source_batch": "cluster_0_group_0",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "person-police-officer",
+      "name": "Police Officer",
+      "description": "Active officer whose fluctuating numbers must be accommodated by the system",
+      "c4_type": "person",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R10"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_sys-billing_person-police-officer",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "sys-billing",
+      "name": "Billing System",
+      "description": "A software system responsible for handling billing operations, particularly in areas with higher charges",
+      "c4_type": "system",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R22"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-charge-engine_sys-billing",
+        "pattern": "layered",
+        "confidence": "default",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "person-customer",
+      "name": "Customer",
+      "description": "Human actor who incurs charges and interacts with billing",
+      "c4_type": "person",
+      "technology": "",
+      "parent_system_id": null,
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R22"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_person-customer_police-officer",
+        "assumption_flag": true,
+        "assumed": true
+      }
+    },
+    {
+      "id": "container-charge-engine",
+      "name": "Charge Engine",
+      "description": "Deployable container that computes charges with awareness of higher-charge areas",
+      "c4_type": "container",
+      "technology": "Java, REST API",
+      "parent_system_id": "sys-billing",
+      "parent_container_id": null,
+      "requirement_ids": [
+        "R22"
+      ],
+      "saam_score": 0.0,
+      "metadata": {
+        "boundary_group_id": "bg_container-billing-api_sys-billing"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "rel-1",
+      "source_id": "person1",
+      "target_id": "container1",
+      "description": "Interacts with web application",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R9",
+        "R25",
+        "R30"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-2",
+      "source_id": "container1",
+      "target_id": "container2",
+      "description": "Sends API requests through gateway",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R9",
+        "R30"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-3",
+      "source_id": "container2",
+      "target_id": "ext1",
+      "description": "Authenticates via external security service",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R9",
+        "R30"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-4",
+      "source_id": "container1",
+      "target_id": "ext-2",
+      "description": "Processes payments via external gateway",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R14",
+        "R29"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-5",
+      "source_id": "container1",
+      "target_id": "container-3",
+      "description": "Reads/writes data to database",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R25",
+        "R14"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-6",
+      "source_id": "container2",
+      "target_id": "component-1",
+      "description": "Delegates authentication to module",
+      "relationship_type": "uses",
+      "diagram_scope": "component",
+      "requirement_ids": [
+        "R9",
+        "R30"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-7",
+      "source_id": "container1",
+      "target_id": "component-2",
+      "description": "Delegates payment processing to module",
+      "relationship_type": "uses",
+      "diagram_scope": "component",
+      "requirement_ids": [
+        "R14",
+        "R29"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-8",
+      "source_id": "container-3",
+      "target_id": "component-3",
+      "description": "Uses data access layer for operations",
+      "relationship_type": "uses",
+      "diagram_scope": "component",
+      "requirement_ids": [
+        "R25",
+        "R14"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel1",
+      "source_id": "person1",
+      "target_id": "container1",
+      "description": "Interacts with web application",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [],
+      "metadata": {}
+    },
+    {
+      "id": "rel2",
+      "source_id": "container1",
+      "target_id": "container2",
+      "description": "Sends API requests through gateway",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [],
+      "metadata": {}
+    },
+    {
+      "id": "rel3",
+      "source_id": "container2",
+      "target_id": "container3",
+      "description": "Reads/writes data",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [],
+      "metadata": {}
+    },
+    {
+      "id": "rel4",
+      "source_id": "container2",
+      "target_id": "ext1",
+      "description": "Delegates security operations to external service",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [],
+      "metadata": {}
+    },
+    {
+      "id": "rel5",
+      "source_id": "container1",
+      "target_id": "container3",
+      "description": "Reads/writes data directly",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [],
+      "metadata": {}
+    },
+    {
+      "id": "rel-public-user-to-system",
+      "source_id": "public-user",
+      "target_id": "high-demand-system",
+      "description": "Public user accesses the Event Response System during high-demand periods",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R24",
+        "public-user"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-load-balancer-to-redundancy",
+      "source_id": "high-demand-container",
+      "target_id": "high-demand-container",
+      "description": "Load balancer routes traffic to redundant containers for reliability",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R24"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-public-user-to-system",
+      "source_id": "public-user",
+      "target_id": "high-demand-system",
+      "description": "Accesses the public information system during high-demand periods",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R24"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-system-to-container",
+      "source_id": "high-demand-system",
+      "target_id": "high-demand-container",
+      "description": "Contains the high-demand service container that handles traffic surges",
+      "relationship_type": "contains",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R24"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-public-user-to-system",
+      "source_id": "public-user",
+      "target_id": "high-demand-system",
+      "description": "Public user accesses the system during high-demand periods such as public events or emergencies",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R24"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-police-officer-to-system",
+      "source_id": "police-officer",
+      "target_id": "system",
+      "description": "Uses the police system over public or unsecured networks",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-public-user-to-system",
+      "source_id": "public-user",
+      "target_id": "system",
+      "description": "May interact with the police system from public networks",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-system-to-gateway",
+      "source_id": "system",
+      "target_id": "secure-gateway",
+      "description": "Contains secure gateway for network security",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-gateway-to-auth",
+      "source_id": "secure-gateway",
+      "target_id": "authentication-service",
+      "description": "Delegates authentication to the authentication service",
+      "relationship_type": "uses",
+      "diagram_scope": "component",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-gateway-to-encryption",
+      "source_id": "secure-gateway",
+      "target_id": "encryption-module",
+      "description": "Uses encryption module to secure data in transit",
+      "relationship_type": "uses",
+      "diagram_scope": "component",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-police-officer-system",
+      "source_id": "police-officer",
+      "target_id": "system",
+      "description": "Uses the system, potentially over public or unsecured networks",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-public-user-system",
+      "source_id": "public-user",
+      "target_id": "system",
+      "description": "Interacts with the system",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [],
+      "metadata": {}
+    },
+    {
+      "id": "rel-police-officer-system",
+      "source_id": "police-officer",
+      "target_id": "system",
+      "description": "Police officer uses the system",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-system-secure-comm",
+      "source_id": "system",
+      "target_id": "secure-communication-module",
+      "description": "System contains secure communication module for handling public/unsecured network usage",
+      "relationship_type": "contains",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-police-officer-secure-comm",
+      "source_id": "police-officer",
+      "target_id": "secure-communication-module",
+      "description": "Police officer uses secure communication module when on public or unsecured networks",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R23"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-police-officer-uses-system",
+      "source_id": "police-officer",
+      "target_id": "system-incident-management",
+      "description": "Police Officer uses the Incident Management System to manage incidents",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R10"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-police-officer-uses-system",
+      "source_id": "person-police-officer",
+      "target_id": "system-incident-management",
+      "description": "Police officers use the Incident Management System to manage fluctuating active officers and incidents",
+      "relationship_type": "uses",
+      "diagram_scope": "context",
+      "requirement_ids": [
+        "R10"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-customer-to-billing-api",
+      "source_id": "person-customer",
+      "target_id": "container-charge-engine",
+      "description": "Customer sends billing requests to the Billing API",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R22"
+      ],
+      "metadata": {}
+    },
+    {
+      "id": "rel-billing-api-to-charge-engine",
+      "source_id": "container-charge-engine",
+      "target_id": "container-charge-engine",
+      "description": "Billing API invokes Charge Engine to compute charges",
+      "relationship_type": "uses",
+      "diagram_scope": "container",
+      "requirement_ids": [
+        "R22"
+      ],
+      "metadata": {}
+    }
+  ],
+  "boundary_groups": [
+    {
+      "group_id": "bg_ext-2_ext-1",
+      "entity_ids": [
+        "ext-1",
+        "ext-2"
+      ],
+      "similarity": 0.6974,
+      "rationale": "Entities have moderate semantic similarity (0.70) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-1_ext-1",
+      "entity_ids": [
+        "container-1",
+        "ext-1"
+      ],
+      "similarity": 0.623,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-2_ext-1",
+      "entity_ids": [
+        "container-2",
+        "ext-1"
+      ],
+      "similarity": 0.6745,
+      "rationale": "Entities have moderate semantic similarity (0.67) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-2_container-1",
+      "entity_ids": [
+        "container-1",
+        "container-2"
+      ],
+      "similarity": 0.6673,
+      "rationale": "Entities have moderate semantic similarity (0.67) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-3_container-1",
+      "entity_ids": [
+        "container-1",
+        "container-3"
+      ],
+      "similarity": 0.6062,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_component-1_ext-1",
+      "entity_ids": [
+        "component-1",
+        "ext-1"
+      ],
+      "similarity": 0.7769,
+      "rationale": "Entities have moderate semantic similarity (0.78) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_component-1_container-2",
+      "entity_ids": [
+        "component-1",
+        "container-2"
+      ],
+      "similarity": 0.6177,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_component-2_ext-2",
+      "entity_ids": [
+        "component-2",
+        "ext-2"
+      ],
+      "similarity": 0.7646,
+      "rationale": "Entities have moderate semantic similarity (0.76) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_component-3_container-1",
+      "entity_ids": [
+        "component-3",
+        "container-1"
+      ],
+      "similarity": 0.6074,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_component-3_container-3",
+      "entity_ids": [
+        "component-3",
+        "container-3"
+      ],
+      "similarity": 0.7379,
+      "rationale": "Entities have moderate semantic similarity (0.74) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_component-3_component-2",
+      "entity_ids": [
+        "component-2",
+        "component-3"
+      ],
+      "similarity": 0.6559,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys1_sys-1",
+      "entity_ids": [
+        "sys-1",
+        "sys1"
+      ],
+      "similarity": 0.6682,
+      "rationale": "Entities have moderate semantic similarity (0.67) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys1_ext-1",
+      "entity_ids": [
+        "ext-1",
+        "sys1"
+      ],
+      "similarity": 0.6427,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys1_container-3",
+      "entity_ids": [
+        "container-3",
+        "sys1"
+      ],
+      "similarity": 0.6171,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys1_component-3",
+      "entity_ids": [
+        "component-3",
+        "sys1"
+      ],
+      "similarity": 0.6065,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container3_container1",
+      "entity_ids": [
+        "container1",
+        "container3"
+      ],
+      "similarity": 0.7106,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container3_container2",
+      "entity_ids": [
+        "container2",
+        "container3"
+      ],
+      "similarity": 0.6984,
+      "rationale": "Entities have moderate semantic similarity (0.70) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container3_container-3",
+      "entity_ids": [
+        "container-3",
+        "container3"
+      ],
+      "similarity": 0.7718,
+      "rationale": "Entities have moderate semantic similarity (0.77) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container3_component-3",
+      "entity_ids": [
+        "component-3",
+        "container3"
+      ],
+      "similarity": 0.6552,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container3_sys1",
+      "entity_ids": [
+        "container3",
+        "sys1"
+      ],
+      "similarity": 0.6623,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_public-user_ext1",
+      "entity_ids": [
+        "ext1",
+        "public-user"
+      ],
+      "similarity": 0.638,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_public-user_person1",
+      "entity_ids": [
+        "person1",
+        "public-user"
+      ],
+      "similarity": 0.7617,
+      "rationale": "Entities have moderate semantic similarity (0.76) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_public-user_component-1",
+      "entity_ids": [
+        "component-1",
+        "public-user"
+      ],
+      "similarity": 0.6045,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_event-response-system_ext1",
+      "entity_ids": [
+        "event-response-system",
+        "ext1"
+      ],
+      "similarity": 0.635,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_event-response-system_person1",
+      "entity_ids": [
+        "event-response-system",
+        "person1"
+      ],
+      "similarity": 0.6272,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_event-response-system_container1",
+      "entity_ids": [
+        "container1",
+        "event-response-system"
+      ],
+      "similarity": 0.6078,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_event-response-system_component-3",
+      "entity_ids": [
+        "component-3",
+        "event-response-system"
+      ],
+      "similarity": 0.6266,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_event-response-system_sys1",
+      "entity_ids": [
+        "event-response-system",
+        "sys1"
+      ],
+      "similarity": 0.6776,
+      "rationale": "Entities have moderate semantic similarity (0.68) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_load-balancing-container_container1",
+      "entity_ids": [
+        "container1",
+        "load-balancing-container"
+      ],
+      "similarity": 0.604,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_load-balancing-container_container2",
+      "entity_ids": [
+        "container2",
+        "load-balancing-container"
+      ],
+      "similarity": 0.6718,
+      "rationale": "Entities have moderate semantic similarity (0.67) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_load-balancing-container_component-3",
+      "entity_ids": [
+        "component-3",
+        "load-balancing-container"
+      ],
+      "similarity": 0.601,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_load-balancing-container_sys1",
+      "entity_ids": [
+        "load-balancing-container",
+        "sys1"
+      ],
+      "similarity": 0.6092,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_load-balancing-container_container3",
+      "entity_ids": [
+        "container3",
+        "load-balancing-container"
+      ],
+      "similarity": 0.6858,
+      "rationale": "Entities have moderate semantic similarity (0.69) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_load-balancing-container_public-user",
+      "entity_ids": [
+        "load-balancing-container",
+        "public-user"
+      ],
+      "similarity": 0.6847,
+      "rationale": "Entities have moderate semantic similarity (0.68) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_load-balancing-container_event-response-system",
+      "entity_ids": [
+        "event-response-system",
+        "load-balancing-container"
+      ],
+      "similarity": 0.7434,
+      "rationale": "Entities have moderate semantic similarity (0.74) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-officer_ext1",
+      "entity_ids": [
+        "ext1",
+        "police-officer"
+      ],
+      "similarity": 0.713,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-officer_person1",
+      "entity_ids": [
+        "person1",
+        "police-officer"
+      ],
+      "similarity": 0.7908,
+      "rationale": "Entities have moderate semantic similarity (0.79) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-officer_container2",
+      "entity_ids": [
+        "container2",
+        "police-officer"
+      ],
+      "similarity": 0.6035,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-officer_component-1",
+      "entity_ids": [
+        "component-1",
+        "police-officer"
+      ],
+      "similarity": 0.6395,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-officer_public-user",
+      "entity_ids": [
+        "police-officer",
+        "public-user"
+      ],
+      "similarity": 0.7478,
+      "rationale": "Entities have moderate semantic similarity (0.75) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-officer_high-demand-system",
+      "entity_ids": [
+        "high-demand-system",
+        "police-officer"
+      ],
+      "similarity": 0.6617,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-officer_high-demand-container",
+      "entity_ids": [
+        "high-demand-container",
+        "police-officer"
+      ],
+      "similarity": 0.6315,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-system_sys-1",
+      "entity_ids": [
+        "police-system",
+        "sys-1"
+      ],
+      "similarity": 0.6046,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-system_sys1",
+      "entity_ids": [
+        "police-system",
+        "sys1"
+      ],
+      "similarity": 0.6344,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-system_high-demand-system",
+      "entity_ids": [
+        "high-demand-system",
+        "police-system"
+      ],
+      "similarity": 0.7039,
+      "rationale": "Entities have moderate semantic similarity (0.70) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-system_high-demand-container",
+      "entity_ids": [
+        "high-demand-container",
+        "police-system"
+      ],
+      "similarity": 0.6201,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_police-system_police-officer",
+      "entity_ids": [
+        "police-officer",
+        "police-system"
+      ],
+      "similarity": 0.6087,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_ext1",
+      "entity_ids": [
+        "ext1",
+        "secure-gateway"
+      ],
+      "similarity": 0.7111,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_container1",
+      "entity_ids": [
+        "container1",
+        "secure-gateway"
+      ],
+      "similarity": 0.6312,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_container2",
+      "entity_ids": [
+        "container2",
+        "secure-gateway"
+      ],
+      "similarity": 0.7849,
+      "rationale": "Entities have moderate semantic similarity (0.78) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_component-1",
+      "entity_ids": [
+        "component-1",
+        "secure-gateway"
+      ],
+      "similarity": 0.6066,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_sys1",
+      "entity_ids": [
+        "secure-gateway",
+        "sys1"
+      ],
+      "similarity": 0.6557,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_container3",
+      "entity_ids": [
+        "container3",
+        "secure-gateway"
+      ],
+      "similarity": 0.6643,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_high-demand-container",
+      "entity_ids": [
+        "high-demand-container",
+        "secure-gateway"
+      ],
+      "similarity": 0.6151,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-gateway_police-officer",
+      "entity_ids": [
+        "police-officer",
+        "secure-gateway"
+      ],
+      "similarity": 0.7116,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_ext1",
+      "entity_ids": [
+        "authentication-service",
+        "ext1"
+      ],
+      "similarity": 0.7068,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_container2",
+      "entity_ids": [
+        "authentication-service",
+        "container2"
+      ],
+      "similarity": 0.6836,
+      "rationale": "Entities have moderate semantic similarity (0.68) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_component-1",
+      "entity_ids": [
+        "authentication-service",
+        "component-1"
+      ],
+      "similarity": 0.7409,
+      "rationale": "Entities have moderate semantic similarity (0.74) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_sys1",
+      "entity_ids": [
+        "authentication-service",
+        "sys1"
+      ],
+      "similarity": 0.6224,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_public-user",
+      "entity_ids": [
+        "authentication-service",
+        "public-user"
+      ],
+      "similarity": 0.7009,
+      "rationale": "Entities have moderate semantic similarity (0.70) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_high-demand-system",
+      "entity_ids": [
+        "authentication-service",
+        "high-demand-system"
+      ],
+      "similarity": 0.6326,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_high-demand-container",
+      "entity_ids": [
+        "authentication-service",
+        "high-demand-container"
+      ],
+      "similarity": 0.645,
+      "rationale": "Entities have moderate semantic similarity (0.65) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_police-officer",
+      "entity_ids": [
+        "authentication-service",
+        "police-officer"
+      ],
+      "similarity": 0.7105,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_police-system",
+      "entity_ids": [
+        "authentication-service",
+        "police-system"
+      ],
+      "similarity": 0.6562,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_authentication-service_secure-gateway",
+      "entity_ids": [
+        "authentication-service",
+        "secure-gateway"
+      ],
+      "similarity": 0.737,
+      "rationale": "Entities have moderate semantic similarity (0.74) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_encryption-module_ext1",
+      "entity_ids": [
+        "encryption-module",
+        "ext1"
+      ],
+      "similarity": 0.689,
+      "rationale": "Entities have moderate semantic similarity (0.69) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_encryption-module_container2",
+      "entity_ids": [
+        "container2",
+        "encryption-module"
+      ],
+      "similarity": 0.6399,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_encryption-module_sys1",
+      "entity_ids": [
+        "encryption-module",
+        "sys1"
+      ],
+      "similarity": 0.6325,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_encryption-module_high-demand-system",
+      "entity_ids": [
+        "encryption-module",
+        "high-demand-system"
+      ],
+      "similarity": 0.6005,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_encryption-module_police-officer",
+      "entity_ids": [
+        "encryption-module",
+        "police-officer"
+      ],
+      "similarity": 0.7105,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_encryption-module_authentication-service",
+      "entity_ids": [
+        "authentication-service",
+        "encryption-module"
+      ],
+      "similarity": 0.7104,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_ext1",
+      "entity_ids": [
+        "ext1",
+        "secure-communication-module"
+      ],
+      "similarity": 0.6959,
+      "rationale": "Entities have moderate semantic similarity (0.70) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_component-1",
+      "entity_ids": [
+        "component-1",
+        "secure-communication-module"
+      ],
+      "similarity": 0.6171,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_public-user",
+      "entity_ids": [
+        "public-user",
+        "secure-communication-module"
+      ],
+      "similarity": 0.6681,
+      "rationale": "Entities have moderate semantic similarity (0.67) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_high-demand-system",
+      "entity_ids": [
+        "high-demand-system",
+        "secure-communication-module"
+      ],
+      "similarity": 0.6026,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_high-demand-container",
+      "entity_ids": [
+        "high-demand-container",
+        "secure-communication-module"
+      ],
+      "similarity": 0.6418,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_police-officer",
+      "entity_ids": [
+        "police-officer",
+        "secure-communication-module"
+      ],
+      "similarity": 0.7506,
+      "rationale": "Entities have moderate semantic similarity (0.75) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_system",
+      "entity_ids": [
+        "secure-communication-module",
+        "system"
+      ],
+      "similarity": 0.686,
+      "rationale": "Entities have moderate semantic similarity (0.69) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_secure-gateway",
+      "entity_ids": [
+        "secure-communication-module",
+        "secure-gateway"
+      ],
+      "similarity": 0.7548,
+      "rationale": "Entities have moderate semantic similarity (0.75) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_authentication-service",
+      "entity_ids": [
+        "authentication-service",
+        "secure-communication-module"
+      ],
+      "similarity": 0.7558,
+      "rationale": "Entities have moderate semantic similarity (0.76) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_secure-communication-module_encryption-module",
+      "entity_ids": [
+        "encryption-module",
+        "secure-communication-module"
+      ],
+      "similarity": 0.7615,
+      "rationale": "Entities have moderate semantic similarity (0.76) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_ext1",
+      "entity_ids": [
+        "ext1",
+        "incident-management-system"
+      ],
+      "similarity": 0.6053,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_person1",
+      "entity_ids": [
+        "incident-management-system",
+        "person1"
+      ],
+      "similarity": 0.6182,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_sys1",
+      "entity_ids": [
+        "incident-management-system",
+        "sys1"
+      ],
+      "similarity": 0.6496,
+      "rationale": "Entities have moderate semantic similarity (0.65) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_public-user",
+      "entity_ids": [
+        "incident-management-system",
+        "public-user"
+      ],
+      "similarity": 0.6459,
+      "rationale": "Entities have moderate semantic similarity (0.65) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_high-demand-container",
+      "entity_ids": [
+        "high-demand-container",
+        "incident-management-system"
+      ],
+      "similarity": 0.7637,
+      "rationale": "Entities have moderate semantic similarity (0.76) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_police-officer",
+      "entity_ids": [
+        "incident-management-system",
+        "police-officer"
+      ],
+      "similarity": 0.6159,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_authentication-service",
+      "entity_ids": [
+        "authentication-service",
+        "incident-management-system"
+      ],
+      "similarity": 0.6375,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_incident-management-system_secure-communication-module",
+      "entity_ids": [
+        "incident-management-system",
+        "secure-communication-module"
+      ],
+      "similarity": 0.6591,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_public-user",
+      "entity_ids": [
+        "person-police-officer",
+        "public-user"
+      ],
+      "similarity": 0.6504,
+      "rationale": "Entities have moderate semantic similarity (0.65) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_high-demand-system",
+      "entity_ids": [
+        "high-demand-system",
+        "person-police-officer"
+      ],
+      "similarity": 0.6217,
+      "rationale": "Entities have moderate semantic similarity (0.62) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_high-demand-container",
+      "entity_ids": [
+        "high-demand-container",
+        "person-police-officer"
+      ],
+      "similarity": 0.6632,
+      "rationale": "Entities have moderate semantic similarity (0.66) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_police-officer",
+      "entity_ids": [
+        "person-police-officer",
+        "police-officer"
+      ],
+      "similarity": 0.6136,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_system",
+      "entity_ids": [
+        "person-police-officer",
+        "system"
+      ],
+      "similarity": 0.6542,
+      "rationale": "Entities have moderate semantic similarity (0.65) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_authentication-service",
+      "entity_ids": [
+        "authentication-service",
+        "person-police-officer"
+      ],
+      "similarity": 0.6262,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_secure-communication-module",
+      "entity_ids": [
+        "person-police-officer",
+        "secure-communication-module"
+      ],
+      "similarity": 0.6429,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-police-officer_system-incident-management",
+      "entity_ids": [
+        "person-police-officer",
+        "system-incident-management"
+      ],
+      "similarity": 0.7895,
+      "rationale": "Entities have moderate semantic similarity (0.79) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_sys-1",
+      "entity_ids": [
+        "sys-1",
+        "sys-billing"
+      ],
+      "similarity": 0.601,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_ext-2",
+      "entity_ids": [
+        "ext-2",
+        "sys-billing"
+      ],
+      "similarity": 0.7079,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_component-2",
+      "entity_ids": [
+        "component-2",
+        "sys-billing"
+      ],
+      "similarity": 0.6964,
+      "rationale": "Entities have moderate semantic similarity (0.70) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_public-user",
+      "entity_ids": [
+        "public-user",
+        "sys-billing"
+      ],
+      "similarity": 0.6355,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_high-demand-system",
+      "entity_ids": [
+        "high-demand-system",
+        "sys-billing"
+      ],
+      "similarity": 0.7191,
+      "rationale": "Entities have moderate semantic similarity (0.72) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_system",
+      "entity_ids": [
+        "sys-billing",
+        "system"
+      ],
+      "similarity": 0.6255,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_system-incident-management",
+      "entity_ids": [
+        "sys-billing",
+        "system-incident-management"
+      ],
+      "similarity": 0.7061,
+      "rationale": "Entities have moderate semantic similarity (0.71) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_sys-billing_person-police-officer",
+      "entity_ids": [
+        "person-police-officer",
+        "sys-billing"
+      ],
+      "similarity": 0.6095,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-customer_person1",
+      "entity_ids": [
+        "person-customer",
+        "person1"
+      ],
+      "similarity": 0.792,
+      "rationale": "Entities have moderate semantic similarity (0.79) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_person-customer_police-officer",
+      "entity_ids": [
+        "person-customer",
+        "police-officer"
+      ],
+      "similarity": 0.6746,
+      "rationale": "Entities have moderate semantic similarity (0.67) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_ext-2",
+      "entity_ids": [
+        "container-billing-api",
+        "ext-2"
+      ],
+      "similarity": 0.6386,
+      "rationale": "Entities have moderate semantic similarity (0.64) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_container1",
+      "entity_ids": [
+        "container-billing-api",
+        "container1"
+      ],
+      "similarity": 0.7513,
+      "rationale": "Entities have moderate semantic similarity (0.75) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_container2",
+      "entity_ids": [
+        "container-billing-api",
+        "container2"
+      ],
+      "similarity": 0.7706,
+      "rationale": "Entities have moderate semantic similarity (0.77) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_component-2",
+      "entity_ids": [
+        "component-2",
+        "container-billing-api"
+      ],
+      "similarity": 0.6287,
+      "rationale": "Entities have moderate semantic similarity (0.63) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_sys1",
+      "entity_ids": [
+        "container-billing-api",
+        "sys1"
+      ],
+      "similarity": 0.6053,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_container3",
+      "entity_ids": [
+        "container-billing-api",
+        "container3"
+      ],
+      "similarity": 0.7226,
+      "rationale": "Entities have moderate semantic similarity (0.72) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_high-demand-system",
+      "entity_ids": [
+        "container-billing-api",
+        "high-demand-system"
+      ],
+      "similarity": 0.6116,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_high-demand-container",
+      "entity_ids": [
+        "container-billing-api",
+        "high-demand-container"
+      ],
+      "similarity": 0.6032,
+      "rationale": "Entities have moderate semantic similarity (0.60) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_secure-gateway",
+      "entity_ids": [
+        "container-billing-api",
+        "secure-gateway"
+      ],
+      "similarity": 0.6537,
+      "rationale": "Entities have moderate semantic similarity (0.65) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_system-incident-management",
+      "entity_ids": [
+        "container-billing-api",
+        "system-incident-management"
+      ],
+      "similarity": 0.6086,
+      "rationale": "Entities have moderate semantic similarity (0.61) suggesting shared deployment context but distinct C4 responsibilities."
+    },
+    {
+      "group_id": "bg_container-billing-api_sys-billing",
+      "entity_ids": [
+        "container-billing-api",
+        "sys-billing"
+      ],
+      "similarity": 0.7346,
+      "rationale": "Entities have moderate semantic similarity (0.73) suggesting shared deployment context but distinct C4 responsibilities."
+    }
+  ],
+  "cross_cutting_candidates": [],
+  "assumption_flags": [
+    "component-3",
+    "system",
+    "system-incident-management",
+    "ext-2",
+    "ext-1",
+    "container-1",
+    "container-2",
+    "container-3",
+    "component-1",
+    "component-2",
+    "sys1",
+    "sys-1",
+    "container3",
+    "container1",
+    "container2",
+    "ext1",
+    "public-user",
+    "person1",
+    "event-response-system",
+    "load-balancing-container",
+    "police-officer",
+    "high-demand-system",
+    "high-demand-container",
+    "police-system",
+    "secure-gateway",
+    "authentication-service",
+    "encryption-module",
+    "secure-communication-module",
+    "incident-management-system",
+    "person-police-officer",
+    "sys-billing",
+    "person-customer",
+    "container-billing-api"
+  ],
+  "status": "final"
+}
