@@ -5,15 +5,23 @@ description = "I-Architect - Generative AI for Software Engineering Architecture
 requires-python = ">=3.11"
 
 dependencies = [
-    "langgraph==1.2.0",
-    "langchain==1.3.0",
-    "langgraph-checkpoint-sqlite==3.0.3",
+    "langgraph>=1.2.0",
+    "langchain>=1.3.0",
+    "langchain-anthropic>=1.4",
+    "langchain-core>=1.4.0",
+    "langgraph-checkpoint-sqlite>=3.0.3",
+    "aiosqlite",
+    "fastembed>=0.8.0",
+    "pydantic>=2.13.0",
+    "scikit-learn>=1.8.0",
+    # Deployment-time / Orchestrator-owned dependencies below.
+    # Not in the Phase 11 minimum-bounds table.
     "mip>=1.17",
-    "fastembed==0.8.0",
-    "pydantic==2.13.0",
-    "python-dotenv==1.2.2",
-    "chevron==0.14",
-    "scikit-learn==1.8.0"
+    "python-dotenv>=1.2.2",
+    "chevron>=0.14",
+    "pdfplumber",
+    "python-docx",
+    "chardet",
 ]
 
 [project.optional-dependencies]
@@ -21,10 +29,18 @@ dev = [
     "pytest>=8.2",
     "pytest-asyncio>=0.25",
 ]
+providers = [
+    "langchain-anthropic>=1.4",
+    "langchain-openai>=1.2",
+    "langchain-google-genai>=3.0",
+]
 
 [build-system]
 requires = ["setuptools>=75.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["arlo*", "raa*"]
+include = [ "arlo*", "ingestion*", "raa*"]
+
+[tool.pyright]
+extraPaths = ["aga/tools"]

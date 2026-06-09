@@ -1,28 +1,30 @@
 ---
 variables:
-  - name: diagram_id
-    type: string
-  - name: error_text
-    type: string
-  - name: current_puml_code
-    type: string
-  - name: retry_count
-    type: number
-  - name: max_retries
-    type: number
+  - {name: diagram_id, type: string}
+  - {name: error_text, type: string}
+  - {name: current_puml_code, type: string}
+  - {name: retry_count, type: number}
+  - {name: max_retries, type: number}
 ---
-The PlantUML server returned a syntax error for diagram {{diagram_id}}.
+{{! skill: c4:rules as c4_rules }}
+
+The `render_plantuml_tool` returned an error for diagram **{{diagram_id}}**.
+This is render attempt **{{retry_count}}** of **{{max_retries}}**.
 
 ## Error Text
 {{{error_text}}}
 
 ## Current PlantUML Code
+```plantuml
 {{{current_puml_code}}}
+```
 
-## Instructions
-1. Quote the error text verbatim
-2. Locate the offending construct in the code
-3. Apply the minimal fix to resolve the error
-4. Return the corrected PlantUML code
+## Correction Instructions
+1. Briefly restate the exact tool error before changing the code.
+2. Locate the specific line or construct in the code that caused the error.
+3. Cross-reference the C4 rules below to identify the violated constraint.
+4. Apply the **minimal fix** — do not restructure the entire diagram.
+5. Return the corrected PlantUML code and call `render_plantuml_tool` again.
 
-Attempt {{retry_count}} of {{max_retries}}.
+## C4 Rules (for cross-reference)
+{{{c4_rules}}}
