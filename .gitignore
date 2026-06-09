@@ -1,6 +1,7 @@
 # Python bytecode & cache
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
@@ -11,39 +12,68 @@ __pycache__/
 .env.*
 !.env.example
 
+# Virtual environment
+.venv/
+
 # Model weights & archives
 arlo/models/
 /models/
 *.7z
+*.bin
+*.gguf
 
 # Lock files & databases
 skills-lock.json
 uv.lock
 embeddings/
 
-# Pip & package artifacts
-=0.8.0
-plans_done/
-*.egg-info/
+# SQLite / LangGraph checkpoints
+*.db
+*.db-shm
+*.db-wal
 
-# Virtual environment
-.venv/
+# Serialized state & intermediate outputs
+*.pkl
+
+# Pip & package artifacts
+*.egg-info/
+dist/
+build/
 
 # AI / Agent tooling & sessions
 .claude/
 .agents/
 .codex/
+.langgraph_api/
 *sessiontoken
+.mcp.json
 
 # Temporary / Output / Scratch folders
 _bmad-output/
 scratch/
-test_project/
 _old_bmad_work/
 matrix.json
 
+# Test project - generated outputs (keep notebooks & source docs)
+test_project/aga_output/
+test_project/aga_debug_output/
+test_project/raa_checkpoint.*
+test_project/*.pkl
+test_project/ingestion_docs_test/
+
+# AGA module - intermediate pickles
+aga/*.pkl
+
+# Filter reports (auto-generated)
+*_filter_report.json
+
+# Generated diagram images
+*.png
+
+# VS Code workspace settings
+.vscode/
+
 # Misc
 Miscellenious/
-arlo_*_graph.png
 checkpoints/
-
+fa/

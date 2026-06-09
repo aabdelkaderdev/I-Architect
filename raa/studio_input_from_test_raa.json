@@ -1,0 +1,436 @@
+{
+  "entity_registry_entries": [],
+  "batches": [
+    {
+      "batch_id": "concern_batch_1",
+      "batch_type": "concern",
+      "asrs": [
+        {
+          "id": "R10",
+          "text": "It should dynamically scale resources to accommodate the fluctuating number of active officers and incidents, ensuring consistent performance without overuse of resources.",
+          "quality_attributes": [
+            "Performance Efficiency",
+            "Cost Efficiency"
+          ]
+        }
+      ],
+      "non_asrs": [],
+      "quality_weights": {
+        "Security": 3,
+        "Cost Efficiency": 4,
+        "Performance Efficiency": 5,
+        "Compatibility": 1,
+        "Reliability": 2
+      },
+      "registry_snapshot": {
+        "entries": {},
+        "snapshot_after_batch": "none"
+      },
+      "decisions": [
+        {
+          "selected_pattern": "Microservices"
+        },
+        {
+          "selected_pattern": "Peer-to-Peer"
+        },
+        {
+          "selected_pattern": "Offline First"
+        },
+        {
+          "selected_pattern": "API-Call"
+        },
+        {
+          "selected_pattern": "Message-Based"
+        },
+        {
+          "selected_pattern": "WebSocket"
+        },
+        {
+          "selected_pattern": "Central"
+        },
+        {
+          "selected_pattern": "Hot-Hot"
+        },
+        {
+          "selected_pattern": "Hot-Cold"
+        },
+        {
+          "selected_pattern": "SQL"
+        },
+        {
+          "selected_pattern": "NoSQL"
+        },
+        {
+          "selected_pattern": "Proactive"
+        },
+        {
+          "selected_pattern": "Reactive"
+        },
+        {
+          "selected_pattern": "Real-time Sync"
+        },
+        {
+          "selected_pattern": "Batch Processing"
+        }
+      ],
+      "condition": "to accommodate the fluctuating number of active officers and incidents"
+    },
+    {
+      "batch_id": "concern_batch_2",
+      "batch_type": "concern",
+      "asrs": [
+        {
+          "id": "R22",
+          "text": "The data synchronization process should minimize network usage to reduce costs associated with data transmission, especially in areas with higher charges.",
+          "quality_attributes": [
+            "Performance Efficiency",
+            "Cost Efficiency"
+          ]
+        }
+      ],
+      "non_asrs": [],
+      "quality_weights": {
+        "Security": 3,
+        "Cost Efficiency": 4,
+        "Performance Efficiency": 5,
+        "Compatibility": 1,
+        "Reliability": 2
+      },
+      "registry_snapshot": {
+        "entries": {},
+        "snapshot_after_batch": "none"
+      },
+      "decisions": [
+        {
+          "selected_pattern": "Microservices"
+        },
+        {
+          "selected_pattern": "Peer-to-Peer"
+        },
+        {
+          "selected_pattern": "Offline First"
+        },
+        {
+          "selected_pattern": "API-Call"
+        },
+        {
+          "selected_pattern": "Message-Based"
+        },
+        {
+          "selected_pattern": "WebSocket"
+        },
+        {
+          "selected_pattern": "Central"
+        },
+        {
+          "selected_pattern": "Hot-Hot"
+        },
+        {
+          "selected_pattern": "Hot-Cold"
+        },
+        {
+          "selected_pattern": "SQL"
+        },
+        {
+          "selected_pattern": "NoSQL"
+        },
+        {
+          "selected_pattern": "Proactive"
+        },
+        {
+          "selected_pattern": "Reactive"
+        },
+        {
+          "selected_pattern": "Real-time Sync"
+        },
+        {
+          "selected_pattern": "Batch Processing"
+        }
+      ],
+      "condition": "especially in areas with higher charges"
+    },
+    {
+      "batch_id": "concern_batch_3",
+      "batch_type": "concern",
+      "asrs": [
+        {
+          "id": "R23",
+          "text": "The system must operate securely even when officers use public or unsecured networks.",
+          "quality_attributes": [
+            "Security"
+          ]
+        }
+      ],
+      "non_asrs": [],
+      "quality_weights": {
+        "Security": 3,
+        "Cost Efficiency": 4,
+        "Performance Efficiency": 5,
+        "Compatibility": 1,
+        "Reliability": 2
+      },
+      "registry_snapshot": {
+        "entries": {},
+        "snapshot_after_batch": "none"
+      },
+      "decisions": [
+        {
+          "selected_pattern": "Microservices"
+        },
+        {
+          "selected_pattern": "Peer-to-Peer"
+        },
+        {
+          "selected_pattern": "Offline First"
+        },
+        {
+          "selected_pattern": "API-Call"
+        },
+        {
+          "selected_pattern": "Message-Based"
+        },
+        {
+          "selected_pattern": "WebSocket"
+        },
+        {
+          "selected_pattern": "Central"
+        },
+        {
+          "selected_pattern": "Hot-Hot"
+        },
+        {
+          "selected_pattern": "Hot-Cold"
+        },
+        {
+          "selected_pattern": "SQL"
+        },
+        {
+          "selected_pattern": "NoSQL"
+        },
+        {
+          "selected_pattern": "Proactive"
+        },
+        {
+          "selected_pattern": "Reactive"
+        },
+        {
+          "selected_pattern": "Real-time Sync"
+        },
+        {
+          "selected_pattern": "Batch Processing"
+        }
+      ],
+      "condition": "when officers use public or unsecured networks"
+    },
+    {
+      "batch_id": "concern_batch_4",
+      "batch_type": "concern",
+      "asrs": [
+        {
+          "id": "R24",
+          "text": "During high-demand periods, such as public events or emergencies, the system's performance must remain stable to handle the increased load.",
+          "quality_attributes": [
+            "Performance Efficiency",
+            "Reliability"
+          ]
+        }
+      ],
+      "non_asrs": [],
+      "quality_weights": {
+        "Security": 3,
+        "Cost Efficiency": 4,
+        "Performance Efficiency": 5,
+        "Compatibility": 1,
+        "Reliability": 2
+      },
+      "registry_snapshot": {
+        "entries": {},
+        "snapshot_after_batch": "none"
+      },
+      "decisions": [
+        {
+          "selected_pattern": "Microservices"
+        },
+        {
+          "selected_pattern": "Peer-to-Peer"
+        },
+        {
+          "selected_pattern": "Offline First"
+        },
+        {
+          "selected_pattern": "API-Call"
+        },
+        {
+          "selected_pattern": "Message-Based"
+        },
+        {
+          "selected_pattern": "WebSocket"
+        },
+        {
+          "selected_pattern": "Central"
+        },
+        {
+          "selected_pattern": "Hot-Hot"
+        },
+        {
+          "selected_pattern": "Hot-Cold"
+        },
+        {
+          "selected_pattern": "SQL"
+        },
+        {
+          "selected_pattern": "NoSQL"
+        },
+        {
+          "selected_pattern": "Proactive"
+        },
+        {
+          "selected_pattern": "Reactive"
+        },
+        {
+          "selected_pattern": "Real-time Sync"
+        },
+        {
+          "selected_pattern": "Batch Processing"
+        }
+      ],
+      "condition": "During high-demand periods, such as public events or emergencies"
+    },
+    {
+      "batch_id": "foundation_batch",
+      "batch_type": "foundation",
+      "asrs": [
+        {
+          "id": "R9",
+          "text": "The system must implement end-to-end encryption to protect sensitive dispatch information in transit and at rest.",
+          "quality_attributes": [
+            "Security"
+          ]
+        },
+        {
+          "id": "R14",
+          "text": "It must utilize cloud services and scalable infrastructure to adjust to budget constraints while maintaining high service levels.",
+          "quality_attributes": [
+            "Cost Efficiency",
+            "Performance Efficiency"
+          ]
+        },
+        {
+          "id": "R25",
+          "text": "The system must reliably synchronize data across multiple devices and platforms so officers can access the most current information.",
+          "quality_attributes": [
+            "Reliability",
+            "Compatibility"
+          ]
+        },
+        {
+          "id": "R29",
+          "text": "Efficient device battery life and data storage should be considered to minimize the cost of hardware replacements and upgrade costs.",
+          "quality_attributes": [
+            "Performance Efficiency",
+            "Cost Efficiency"
+          ]
+        },
+        {
+          "id": "R30",
+          "text": "Data retention and deletion policies must comply with federal and state regulations to maintain the confidentiality and privacy of all information.",
+          "quality_attributes": [
+            "Security"
+          ]
+        }
+      ],
+      "non_asrs": [
+        {
+          "id": "R1",
+          "text": "The system shall allow officers to report their status (e.g., available, busy, on break)."
+        },
+        {
+          "id": "R2",
+          "text": "The dispatch system must deliver sub-second response times to ensure officers receive updates and dispatch orders promptly."
+        },
+        {
+          "id": "R4",
+          "text": "Officers shall be able to receive and acknowledge dispatch orders through the system."
+        },
+        {
+          "id": "R5",
+          "text": "The user interface should be intuitive and straightforward, allowing officers to log incidents and request support quickly without extensive training."
+        },
+        {
+          "id": "R6",
+          "text": "The system should optimize resource allocation to reduce operational costs without compromising service quality."
+        },
+        {
+          "id": "R7",
+          "text": "The system shall enable officers to record audio statements and take notes within the incident report feature."
+        },
+        {
+          "id": "R8",
+          "text": "The system shall provide a map interface displaying the locations of incidents and dispatched officers."
+        },
+        {
+          "id": "R12",
+          "text": "Officers can directly attach photos and videos to their incident reports through the system interface."
+        },
+        {
+          "id": "R13",
+          "text": "The system should offer streamlined workflows for common tasks such as reporting incidents, requesting backup, and accessing case information."
+        },
+        {
+          "id": "R15",
+          "text": "The system shall maintain a log of all dispatch communications and actions taken by officers for accountability and review."
+        },
+        {
+          "id": "R16",
+          "text": "Officers shall be able to access a database of local laws and regulations through the system for reference during patrols."
+        },
+        {
+          "id": "R17",
+          "text": "Regular security audits and updates are required to address new vulnerabilities and ensure the system's integrity."
+        },
+        {
+          "id": "R18",
+          "text": "The system must process and analyze incident data efficiently to provide timely and relevant information to officers in the field."
+        },
+        {
+          "id": "R19",
+          "text": "It should ensure data integrity and accurate incident reporting across all devices, even when switching between online and offline modes."
+        },
+        {
+          "id": "R20",
+          "text": "Officers should be able to customize their dashboard to access the most relevant information quickly."
+        },
+        {
+          "id": "R21",
+          "text": "The system shall offer a secure messaging feature for officers to communicate with the dispatch center and other officers."
+        },
+        {
+          "id": "R26",
+          "text": "The system shall generate and send automated alerts to officers based on specific criteria such as incident proximity or expertise required."
+        },
+        {
+          "id": "R27",
+          "text": "The system must provide officers with clear, actionable notifications and alerts during critical situations."
+        },
+        {
+          "id": "R28",
+          "text": "The system shall provide officers access to historical data and analytics on past incidents and outcomes for informed decision-making."
+        }
+      ],
+      "quality_weights": {
+        "Security": 3,
+        "Cost Efficiency": 4,
+        "Performance Efficiency": 5,
+        "Compatibility": 1,
+        "Reliability": 2
+      },
+      "registry_snapshot": {
+        "entries": {},
+        "snapshot_after_batch": "none"
+      }
+    }
+  ],
+  "batch_index": 0,
+  "batch_outputs": [],
+  "group_vectors": {}
+}
