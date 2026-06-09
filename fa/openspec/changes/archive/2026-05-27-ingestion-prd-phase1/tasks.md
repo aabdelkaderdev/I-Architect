@@ -1,0 +1,26 @@
+# Tasks: Data Ingestion & Requirement Filtering
+
+- [x] **Task 1: Exception Taxonomy**
+  - Define `EmptyFileError`, `UnsupportedFormatError`, `ExtractionError`, `EmptyRequirementsError`, `NonStandardJSONError`, `FormatMismatchError`.
+- [x] **Task 2: State Schema & Context Schema**
+  - Define `IngestionState` as a `TypedDict` with `file_path` and `extracted_requirements` keys.
+  - Define `IngestionContext` as a `@dataclass` with a `llm: BaseChatModel` field for runtime context injection.
+- [x] **Task 3: Stage 1 — Format Extractors**
+  - Implement PDF extractor using `pdfplumber`.
+  - Implement DOCX extractor using `python-docx`.
+  - Implement TXT extractor using `chardet`.
+  - Implement JSON parser and validator.
+- [x] **Task 4: Stage 1 — Normalisation & ID Generation**
+  - Implement auto-generation of IDs (default prefix `REQ-`).
+  - Create standard requirement format formatter (`dict[str, str]`).
+- [x] **Task 5: JSON Passthrough**
+  - Implement logic to bypass extraction for compliant JSON inputs.
+- [x] **Task 6: Stage 2 — Requirement Filtering Agent (RFA)**
+  - Implement LLM classification to filter Signal/Noise.
+  - Access LLM via `runtime: Runtime[IngestionContext]` (not through state).
+  - Apply threshold logic for dropping noise.
+- [x] **Task 7: LangGraph StateGraph Integration**
+  - Build `StateGraph(IngestionState, context_schema=IngestionContext)`.
+  - Wire extraction → normalisation → filtering nodes with `add_node` / `add_edge`.
+  - Compile graph via `.compile()`.
+  - Orchestrator invokes with `graph.invoke({...}, context={"llm": llm})`.
